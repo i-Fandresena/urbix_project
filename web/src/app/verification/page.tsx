@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import Workspace from "./workspace";
-import { createClient, isSupabaseConfigured } from "@/lib/supabase/server";
+import { getAuthSession } from "@/lib/auth";
+import { isAuthConfigured } from "@/lib/auth-config";
 
 export const metadata: Metadata = {
   title: "Vérification visuelle — Hamarino",
@@ -9,13 +10,12 @@ export const metadata: Metadata = {
 };
 
 export default async function VerificationPage() {
-  if (!isSupabaseConfigured()) {
-    if (process.env.NODE_ENV === "production") redirect("/connexion?configuration=supabase");
+  if (!isAuthConfigured()) {
+    if (process.env.NODE_ENV === "production") redirect("/connexion?configuration=postgres");
     return <Workspace />;
   }
 
-  const supabase = await createClient();
-  const { data, error } = await supabase.auth.getClaims();
-  if (error || !data?.claims?.sub) redirect("/connexion?next=%2Fverification");
+  const session = await getAuthSession();
+  if (!session) redirect("/connexion?next=%2Fverification");
   return <Workspace />;
 }

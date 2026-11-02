@@ -1,0 +1,20 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: hamarino
+      POSTGRES_USER: hamarino
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-hamarino-local-dev}
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - hamarino-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hamarino -d hamarino"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  hamarino-postgres:

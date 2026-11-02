@@ -1,12 +1,13 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { createClient, isSupabaseConfigured } from "@/lib/supabase/server";
+import { headers } from "next/headers";
+import { auth } from "@/lib/auth";
+import { isAuthConfigured } from "@/lib/auth-config";
 
 export async function signOut() {
-  if (isSupabaseConfigured()) {
-    const supabase = await createClient();
-    await supabase.auth.signOut();
+  if (isAuthConfigured()) {
+    await auth.api.signOut({ headers: await headers() });
   }
   redirect("/");
 }

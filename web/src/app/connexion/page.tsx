@@ -1,9 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { ArrowLeft, ArrowUpRight } from "lucide-react";
 import LoginForm from "./login-form";
 import QueryNotice from "./query-notice";
+import { getAuthSession } from "@/lib/auth";
+import { isAuthConfigured, isEmailDeliveryConfigured } from "@/lib/auth-config";
 
 export const metadata: Metadata = {
   title: "Connexion — Hamarino",
@@ -32,7 +35,10 @@ function AuthArtwork() {
   );
 }
 
-export default function ConnexionPage() {
+export default async function ConnexionPage() {
+  const configured = isAuthConfigured();
+  if (configured && await getAuthSession()) redirect("/verification");
+
   return (
     <main className="auth-page">
       <div className="auth-split">
@@ -52,7 +58,7 @@ export default function ConnexionPage() {
             <div className="auth-mobile-brand"><Brand /></div>
             <div className="auth-heading"><span className="auth-heading__eyebrow">ESPACE ÉDITORIAL · ACCÈS SÉCURISÉ</span><h2 id="auth-title">Votre espace Hamarino</h2><p>Connectez-vous ou créez un accès pour votre rédaction.</p></div>
             <Suspense fallback={null}><QueryNotice /></Suspense>
-            <LoginForm />
+            <LoginForm configured={configured} emailConfigured={configured && isEmailDeliveryConfigured()} />
             <div className="auth-panel__back"><Link href="/"><ArrowUpRight size={13} /> Découvrir Hamarino</Link></div>
           </div>
         </section>

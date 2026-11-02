@@ -22,7 +22,7 @@ Les journalistes à Madagascar reçoivent des photos et vidéos dont le lieu, la
 
 Un exemple d’interface est disponible sans clé Gemini. Il est **simulé**, ne cite aucune source et ne doit jamais être présenté au jury comme un fait vérifié.
 
-Le parcours d’accès démarre sur la landing `/`, puis mène à `/connexion` (création ou connexion Supabase) avant l’espace `/verification`. La landing comporte une prévisualisation mobile et un emplacement de téléchargement. L’APK n’est pas publiable tant qu’une URL publique n’est pas disponible : l’application Android doit joindre le serveur Next.js pour authentifier l’utilisateur et appeler Gemini sans embarquer la clé.
+Le parcours d’accès démarre sur la landing `/`, puis mène à `/connexion` (création ou connexion Better Auth) avant l’espace `/verification`. Les comptes et sessions sont conservés dans PostgreSQL. La landing comporte une prévisualisation mobile et un emplacement de téléchargement. L’APK n’est pas publiable tant qu’une URL publique n’est pas disponible : l’application Android doit joindre le serveur Next.js pour authentifier l’utilisateur et appeler Gemini sans embarquer la clé.
 
 ## 3. États et règles éditoriales
 
@@ -40,15 +40,16 @@ Le parcours d’accès démarre sur la landing `/`, puis mène à `/connexion` (
 - `web/src/app/page.tsx` : landing publique et présentation du produit.
 - `web/src/app/connexion/` : création de compte, connexion et demande de réinitialisation.
 - `web/src/app/verification/` : interface et état local du formulaire/résultat.
-- `web/src/proxy.ts` : renouvellement de session, redirections d’authentification et protection des routes.
-- `web/src/lib/supabase/` : clients navigateur/serveur et rafraîchissement des sessions.
+- `web/src/proxy.ts` : redirections optimistes vers la connexion ; les routes protégées valident aussi la session côté serveur.
+- `web/src/lib/auth.ts` : Better Auth, pool PostgreSQL et e-mails SMTP facultatifs.
+- `web/src/app/api/auth/[...all]/route.ts` : endpoints Better Auth.
 - `web/src/app/api/analyze/route.ts` : route serveur d’analyse, Gemini Interactions API et recherche Google.
-- Supabase Auth : sessions par cookies, confirmation d’adresse e-mail et authentification protégée de la route d’analyse.
+- Better Auth avec PostgreSQL (`pg`) : comptes e-mail/mot de passe, mots de passe hachés et sessions par cookies ; SMTP est facultatif pour la confirmation et la récupération par e-mail.
 - `@google/genai` : SDK officiel Gemini.
 - `sharp` : lecture réelle du format, normalisation et retrait des métadonnées par réencodage en mémoire.
 - `geist` : polices auto-hébergées, sans requête externe pour les polices.
 - `lucide-react` : pictogrammes fonctionnels.
-- Aucun dossier de vérification, stockage d’image, suivi analytique ou journal de recherches n’est installé. Supabase conserve les données minimales de compte et de session.
+- Aucun dossier de vérification, stockage d’image, suivi analytique ou journal de recherches n’est installé. PostgreSQL conserve les données minimales de compte, les mots de passe hachés et les sessions.
 
 ## 5. Sécurité et confidentialité du MVP
 
@@ -56,8 +57,9 @@ Le parcours d’accès démarre sur la landing `/`, puis mène à `/connexion` (
 - La clé publiée dans la conversation doit être révoquée/rotée. Ne pas la remettre dans le dépôt, le README, un fichier d’équipe, un ticket ou une conversation. Créer une clé d’autorisation neuve dans Google AI Studio et la saisir localement dans `web/.env.local`.
 - Le fichier n’est jamais écrit sur disque par l’application : il est reçu et normalisé en mémoire, puis transmis à l’API Gemini après consentement.
 - Le projet Gemini doit rester au forfait **Free**, sans compte de facturation associé. L’application n’a aucun basculement payant. Google publie 500 requêtes Google Search par jour au forfait gratuit (quota partagé avec Flash-Lite) ; les limites peuvent changer et une demande peut être refusée une fois une limite atteinte.
-- L’authentification utilise le projet **Supabase Free** ; ne pas ajouter une clé service-role ou de formule payante. Le fournisseur d’e-mail intégré est limité à 2 messages par heure et les projets Free peuvent être mis en pause après une semaine d’inactivité. Vérifier ces limites avant le pitch ([tarifs Supabase](https://supabase.com/pricing), [limites e-mail Auth](https://supabase.com/docs/guides/auth/rate-limits)).
-- Les pages de connexion et d’inscription vérifient l’identité via Supabase et la session est protégée par cookies SSR. La route d’analyse revalide la session côté serveur ; la clé Gemini reste exclusivement côté serveur.
+- La base PostgreSQL doit être fournie par l’équipe, en local ou chez un hébergeur choisi sans dépasser le budget. `DATABASE_URL` et `BETTER_AUTH_SECRET` restent des secrets serveur. Le conteneur Compose fourni est réservé au développement local.
+- Les pages de connexion et d’inscription utilisent Better Auth. Le proxy ne fait qu’une redirection optimiste ; la page `/verification` et la route d’analyse revalident la session côté serveur avant tout accès. La clé Gemini reste exclusivement côté serveur.
+- Aucun service d’e-mail n’est requis pour créer un compte et se connecter. La confirmation d’adresse et la récupération du mot de passe sont activées seulement lorsque des paramètres SMTP sont fournis ; tester l’envoi avant de l’exiger en production.
 - Les conditions du forfait gratuit autorisent Google à utiliser prompts et réponses pour améliorer ses produits. Le consentement de l’interface l’indique ; réserver la démo à des images autorisées, publiques et non sensibles.
 - L’appel Interactions utilise `store: false` pour ne pas conserver la requête/réponse dans l’historique des interactions Google. Cela ne change pas les conditions d’utilisation des données du forfait gratuit.
 - La suppression EXIF élimine des métadonnées utiles comme coordonnées et date ; Hamarino ne sert donc pas de chaîne de conservation de preuve. Conserver le fichier original dans un système rédactionnel maîtrisé si l’enquête l’exige.
@@ -103,7 +105,7 @@ La démo réelle doit utiliser une clé de remplacement neuve, une image dont l�
 - Valider le nom et le sens exact de « Hamarino » avec un locuteur malgache natif.
 - Choisir une image de démonstration avec licence/autorisation et un fait qui se recoupe dans des sources ouvertes.
 - Préparer une nouvelle clé Gemini dans un projet dont le statut reste **Free**, sans compte de facturation lié, surveiller les quotas gratuits et ne pas partager la clé dans le chat.
-- Créer un projet Supabase Free, renseigner les variables locales, ajouter les URLs de retour autorisées, puis créer un premier compte avant la démo.
-- Choisir une URL publique gratuite pour héberger Next.js ; elle est nécessaire aux e-mails de confirmation et à l’APK Android. Préparer ensuite la signature Android et le lien de téléchargement.
+- Démarrer PostgreSQL en local ou créer une base PostgreSQL accessible au serveur, renseigner les variables locales, lancer `npm run db:migrate`, puis créer un premier compte avant la démo.
+- Choisir une URL publique pour héberger Next.js ; elle est nécessaire à l’APK Android et aux liens d’e-mail si SMTP est configuré. Préparer ensuite la signature Android et le lien de téléchargement.
 - Faire relire les termes de consentement et les langues par l’équipe éditoriale.
 - Demander à Claude Code la revue sécurité, la mise en mouvement Framer Motion et l’amélioration UX décrites dans `CLAUDE.md`.

@@ -4,7 +4,7 @@ import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowRight, CircleAlert, Eye, EyeOff, LoaderCircle } from "lucide-react";
-import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
+import { authClient } from "@/lib/auth-client";
 
 export default function NewPasswordPage() {
   const [passwordVisible, setPasswordVisible] = useState(false);
@@ -25,18 +25,17 @@ export default function NewPasswordPage() {
       setError(true);
       return;
     }
-    if (!isSupabaseConfigured()) {
-      setMessage("La configuration Supabase est manquante.");
+    const token = new URLSearchParams(window.location.search).get("token");
+    if (!token) {
+      setMessage("Le lien de réinitialisation est incomplet. Demandez-en un nouveau depuis la page de connexion.");
       setError(true);
       return;
     }
     setBusy(true);
     try {
-      const supabase = createClient();
-      const { error: updateError } = await supabase.auth.updateUser({ password });
+      const { error: updateError } = await authClient.resetPassword({ newPassword: password, token });
       if (updateError) throw updateError;
-      router.replace("/verification");
-      router.refresh();
+      router.replace("/connexion?password-reset=1");
     } catch {
       setMessage("Le lien de réinitialisation a expiré ou n’est plus valide. Demandez-en un nouveau.");
       setError(true);

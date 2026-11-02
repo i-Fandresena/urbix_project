@@ -20,7 +20,7 @@ La vidéo et le PDF sources restent dans le dossier de travail et sont exclus du
 
 L’analyse d’image ne prouve pas le lieu, la date, l’auteur ou une manipulation. L’absence de sources citées force le statut « À vérifier » et une confiance insuffisante. Le journaliste doit consulter les sources et décider.
 
-La landing et l’espace sont adaptés au mobile. L’APK Android n’est pas encore publié : il faut d’abord choisir une URL publique pour le serveur, afin que l’application mobile puisse se connecter à Supabase et à l’API Gemini. Le bouton Android reste volontairement désactivé jusque-là.
+La landing et l’espace sont adaptés au mobile. L’APK Android n’est pas encore publié : il faut d’abord choisir une URL publique pour le serveur, afin que l’application mobile puisse se connecter à PostgreSQL et à l’API Gemini. Le bouton Android reste volontairement désactivé jusque-là.
 
 ## Lancer en local
 
@@ -30,29 +30,29 @@ Prérequis : Node.js 22 ou plus récent et npm. L’application se trouve dans `
 cd web
 npm install
 Copy-Item .env.example .env.local
-# Renseigner les variables Supabase Free et la clé Gemini neuve dans .env.local
+# Renseigner DATABASE_URL, BETTER_AUTH_SECRET et une clé Gemini neuve dans .env.local
+npm run db:start
+npm run db:migrate
 npm run dev
 ```
 
-Ouvrir http://localhost:3000. Sans variables Supabase, la landing et la prévisualisation de l’espace sur http://localhost:3000/verification restent consultables en mode développement, mais la création de compte et l’analyse réelle ne sont pas disponibles.
+Ouvrir http://localhost:3000. Sans variables PostgreSQL et Better Auth, la landing et la prévisualisation de l’espace sur http://localhost:3000/verification restent consultables en mode développement, mais la création de compte et l’analyse réelle ne sont pas disponibles.
 
 ### Clé Gemini
 
 La route utilise `GEMINI_API_KEY` seulement côté serveur. Créez une clé **neuve** dans un projet Google AI Studio dont la colonne **Billing Tier** indique **Free**, puis ajoutez-la uniquement à `web/.env.local` (ce fichier est ignoré par Git). Ne reliez aucun compte de facturation au projet : c’est cette configuration qui maintient le projet au forfait gratuit et évite les appels payants. Ne collez aucune clé dans le chat, le code ou un commit. Une clé précédemment partagée dans une conversation doit être révoquée/rotée avant la démo.
 
-### Connexion Supabase
+### Comptes et PostgreSQL
 
-La création de compte et la connexion par e-mail utilisent Supabase Auth. Le projet est à créer par l’équipe au forfait **Free**, sans activer de formule payante. Copiez `.env.example` vers `.env.local`, puis renseignez `NEXT_PUBLIC_SUPABASE_URL` et `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` depuis les paramètres API du projet Supabase. La clé publishable peut être utilisée côté navigateur ; ne jamais utiliser `service_role`. L’URL de redirection e-mail doit inclure `http://localhost:3000/auth/callback` et l’URL publique finale suivie de `/auth/callback`.
+Hamarino se connecte directement à PostgreSQL avec `pg`. Better Auth gère les comptes e-mail/mot de passe, les mots de passe hachés et les sessions. La base ne stocke pas les images, les analyses ni les recherches. L’équipe peut utiliser le serveur local fourni par `compose.yaml` ou toute instance PostgreSQL accessible depuis le serveur Next.js.
 
-Le fournisseur d’e-mail intégré au forfait gratuit est limité à deux messages par heure. Cela peut ralentir les inscriptions et réinitialisations de mot de passe pendant une démo. Supabase peut mettre en pause les projets Free inactifs ; vérifier leur statut avant la présentation.
+Depuis `web/`, démarrez PostgreSQL localement avec `npm run db:start`, puis renseignez `DATABASE_URL`, `BETTER_AUTH_SECRET` et `BETTER_AUTH_URL` dans `.env.local`. Générez un secret avec Node.js :
 
-```env
-NEXT_PUBLIC_SUPABASE_URL=https://votre-projet.supabase.co
-NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_votre_cle
-GEMINI_API_KEY=remplacer_par_une_cle_neuve
+```powershell
+node -e "console.log(require('node:crypto').randomBytes(32).toString('base64url'))"
 ```
 
-Configurez dans Supabase l’URL de site `http://localhost:3000` et l’URL de redirection `http://localhost:3000/auth/callback`. Pour un déploiement, ajoutez aussi l’URL publique finale et son chemin `/auth/callback` dans les URL autorisées. N’ajoutez jamais une clé `service_role` au code navigateur.
+Créez les tables d’authentification avec `npm run db:migrate`, puis lancez le site avec `npm run dev`. La création de compte est disponible dans `/connexion`. Un SMTP n’est pas nécessaire pour l’inscription et la connexion ; il est requis pour la confirmation d’adresse et la récupération du mot de passe. Configurez `AUTH_SMTP_URL` et `AUTH_EMAIL_FROM` seulement si un serveur SMTP est disponible. Les identifiants SMTP et PostgreSQL restent dans `.env.local`, jamais dans le navigateur ou Git.
 
 L’application utilise `gemini-2.5-flash` et Google Search, disponibles au forfait gratuit dans les limites publiées par Google : la recherche est plafonnée à 500 requêtes par jour, quota partagé avec Flash-Lite. Les limites de génération peuvent aussi varier et les quotas évoluer. En cas de limite atteinte, Hamarino affiche une erreur et ne bascule vers aucun modèle payant. Les limites ne sont pas un budget : gardez le projet sans compte de facturation lié.
 
@@ -63,19 +63,23 @@ Le forfait gratuit peut utiliser les prompts et réponses pour améliorer les pr
 - `web/src/app/page.tsx` — landing publique.
 - `web/src/app/connexion/` — inscription, connexion et récupération de compte.
 - `web/src/app/verification/` — espace de travail authentifié.
-- `web/src/lib/supabase/` — gestion des clients et sessions d’authentification.
-- `web/src/proxy.ts` — renouvellement de session et protection des routes.
+- `web/src/lib/auth.ts` — Better Auth, PostgreSQL et sessions côté serveur.
+- `web/src/lib/auth-client.ts` — client d’authentification du formulaire.
+- `web/src/proxy.ts` — redirections optimistes ; les pages et l’API valident la session dans PostgreSQL.
 - `web/src/app/api/analyze/route.ts` — validation, normalisation en mémoire et appel Gemini côté serveur.
 - `PRODUCT_SPEC.md` — état du MVP, choix produit, règles éditoriales et limites connues.
 - `BRAND_GUIDELINES.md` — identité visuelle et principes UI.
 - `CLAUDE.md` — handoff à Claude Code pour la sécurité et Framer Motion.
 
-Stack : Next.js App Router, React, TypeScript, Geist Sans/Serif, Lucide, `@supabase/ssr`, `@supabase/supabase-js`, `@google/genai`, Gemini 2.5 Flash avec Google Search grounding (forfait gratuit) et Sharp.
+Stack : Next.js App Router, React, TypeScript, PostgreSQL (`pg`), Better Auth, SMTP facultatif (`nodemailer`), Geist Sans/Serif, Lucide, `@google/genai`, Gemini 2.5 Flash avec Google Search grounding (forfait gratuit) et Sharp.
 
 Commandes depuis `web/` :
 
 ```powershell
 npm run dev
+npm run db:start
+npm run db:migrate
+npm run db:stop
 npm run build
 npm run lint
 ```
@@ -84,11 +88,11 @@ npm run lint
 
 - Le consentement annonce explicitement que le fichier est transmis à Gemini.
 - Hamarino ne sauvegarde ni l’image ni son historique ; la réception et le traitement se font en mémoire côté serveur, et l’appel Interactions est envoyé avec `store: false`. Le forfait gratuit Google peut utiliser les prompts et réponses pour améliorer ses produits : ne pas envoyer de contenus sensibles ou confidentiels.
-- Supabase Auth conserve les données nécessaires au compte et à la session. Aucun dossier de vérification ni image n’est associé à ce compte dans cette version.
+- PostgreSQL conserve les données nécessaires au compte et à la session. Aucun dossier de vérification ni image n’est associé à ce compte dans cette version.
 - Le réencodage retire les métadonnées EXIF. Le produit n’est donc pas un outil de conservation des originaux ni une chaîne de preuve forensique.
 - Un outil de recherche web peut trouver des sources récentes, mais cela ne signifie pas qu’il a retrouvé la première publication d’une image.
 - Pas de recherche inversée d’image, d’analyse médico-légale, de traitement vidéo, de mode hors-ligne, d’annuaire de contacts ni de couverture multilingue dans ce MVP.
-- Les comptes et l’accès à l’analyse sont protégés par Supabase Auth. Il n’y a pas encore de dossiers par utilisateur, d’audit de publication ni de limitation distribuée des appels Gemini. Avant une ouverture publique, ajouter une protection contre l’abus au niveau de la plateforme/hébergeur et revoir les règles de confidentialité.
+- Les comptes et l’accès à l’analyse sont protégés par Better Auth et PostgreSQL. Il n’y a pas encore de dossiers par utilisateur, d’audit de publication ni de limitation distribuée des appels Gemini. Avant une ouverture publique, ajouter une protection contre l’abus au niveau de la plateforme/hébergeur et revoir les règles de confidentialité.
 - Le produit est en français. Les formulations malgaches et anglaises doivent être relues par des locuteurs natifs avant publication.
 
 Pour la feuille de route et un récit de démo, consulter [PRODUCT_SPEC.md](PRODUCT_SPEC.md).

@@ -1,5 +1,6 @@
 import { GoogleGenAI } from "@google/genai";
-import { createClient as createSupabaseServerClient, isSupabaseConfigured } from "@/lib/supabase/server";
+import { auth } from "@/lib/auth";
+import { isAuthConfigured } from "@/lib/auth-config";
 import sharp from "sharp";
 
 export const maxDuration = 60;
@@ -126,13 +127,17 @@ Retourne uniquement le JSON correspondant au schéma demandé. Les sources cité
 }
 
 export async function POST(request: Request) {
-  if (!isSupabaseConfigured()) {
-    return Response.json({ error: "La connexion Supabase n’est pas configurée sur ce serveur." }, { status: 503 });
+  if (!isAuthConfigured()) {
+    return Response.json({ error: "La base PostgreSQL et l’authentification ne sont pas configurées sur ce serveur." }, { status: 503 });
   }
 
-  const supabase = await createSupabaseServerClient();
-  const { data: authData, error: authError } = await supabase.auth.getClaims();
-  if (authError || !authData?.claims?.sub) {
+  let authSession: Awaited<ReturnType<typeof auth.api.getSession>>;
+  try {
+    authSession = await auth.api.getSession({ headers: request.headers });
+  } catch {
+    return Response.json({ error: "Le service de connexion PostgreSQL est momentanément indisponible." }, { status: 503 });
+  }
+  if (!authSession) {
     return Response.json({ error: "Connectez-vous pour lancer une analyse." }, { status: 401 });
   }
 
