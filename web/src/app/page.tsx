@@ -16,10 +16,10 @@ import {
   MapPinned,
   Newspaper,
   ScanSearch,
-  ShieldCheck,
   Upload,
   X,
 } from "lucide-react";
+import Image from "next/image";
 import { ChangeEvent, DragEvent, FormEvent, useEffect, useMemo, useRef, useState } from "react";
 
 type Source = { title: string; url: string };
@@ -60,9 +60,9 @@ function BrandMark({ small = false }: { small?: boolean }) {
     <span className={`brand-mark${small ? " brand-mark--small" : ""}`} aria-hidden="true">
       <svg viewBox="0 0 40 40" fill="none">
         <path d="M4.5 13V4.5H13M27 4.5h8.5V13M35.5 27v8.5H27M13 35.5H4.5V27" />
-        <circle cx="20" cy="20" r="5.3" />
-        <path d="m24 24 6.5 6.5" />
-        <circle className="brand-mark__dot" cx="20" cy="20" r="1.6" />
+        <circle cx="16" cy="20" r="2.7" />
+        <path d="M18.7 20h8.5" />
+        <circle className="brand-mark__dot" cx="30" cy="20" r="2.1" />
       </svg>
     </span>
   );
@@ -102,12 +102,17 @@ export default function Home() {
   function acceptFile(nextFile?: File) {
     setError("");
     setAnalysis(null);
+    setConsented(false);
     if (!nextFile) return;
     if (!nextFile.type.startsWith("image/")) {
+      setFile(null);
+      setFileInputKey((key) => key + 1);
       setError("Choisissez un fichier image au format JPEG, PNG ou WebP.");
       return;
     }
     if (nextFile.size > MAX_FILE_SIZE) {
+      setFile(null);
+      setFileInputKey((key) => key + 1);
       setError("Cette image dépasse 8 Mo. Choisissez un fichier plus léger.");
       return;
     }
@@ -133,7 +138,7 @@ export default function Home() {
       return;
     }
     if (!consented) {
-      setError("Confirmez le transfert temporaire de l’image vers Gemini pour lancer l’analyse.");
+      setError("Confirmez le transfert de l’image vers Gemini pour lancer l’analyse.");
       return;
     }
 
@@ -143,9 +148,16 @@ export default function Home() {
       payload.set("image", file);
       payload.set("claim", claim.trim());
       payload.set("context", context.trim());
+      payload.set("consent", "true");
       const response = await fetch("/api/analyze", { method: "POST", body: payload });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || "L’analyse n’a pas abouti. Réessayez dans un instant.");
+      const data: unknown = await response.json().catch(() => null);
+      if (!response.ok) {
+        const message = typeof data === "object" && data !== null && "error" in data && typeof data.error === "string" ? data.error : "L’analyse n’a pas abouti. Réessayez dans un instant.";
+        throw new Error(message);
+      }
+      if (typeof data !== "object" || data === null || !("analysis" in data)) {
+        throw new Error("La réponse reçue n’est pas exploitable. Réessayez dans un instant.");
+      }
       setAnalysis(data.analysis as Analysis);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Impossible de joindre le service pour le moment.");
@@ -175,6 +187,12 @@ export default function Home() {
       "",
       "Éléments visuels :",
       ...analysis.visualObservations.map((item) => `• ${item}`),
+      "",
+      "Contexte recoupé :",
+      ...(analysis.contextFindings.length ? analysis.contextFindings.map((item) => `• ${item}`) : ["• Aucun élément cité."]),
+      "",
+      "Limites :",
+      ...(analysis.limitations.length ? analysis.limitations.map((item) => `• ${item}`) : ["• Aucune limite indiquée."]),
       "",
       "À faire :",
       ...analysis.nextSteps.map((item) => `• ${item}`),
@@ -246,7 +264,7 @@ export default function Home() {
                 <div className="step-index"><span>01</span><i /> <i /> <i /></div>
               </div>
 
-              <form onSubmit={handleSubmit}>
+              <form onSubmit={handleSubmit} aria-busy={busy}>
                 <label className="field-label" htmlFor="image-upload">L’image à vérifier <span className="required-mark">*</span></label>
                 <div
                   className={`upload-zone${dragging ? " upload-zone--dragging" : ""}${file ? " upload-zone--file" : ""}`}
@@ -254,15 +272,15 @@ export default function Home() {
                   onDragLeave={() => setDragging(false)}
                   onDrop={onDrop}
                 >
-                  <input key={fileInputKey} ref={fileInputRef} id="image-upload" className="visually-hidden" type="file" accept="image/jpeg,image/png,image/webp" onChange={onFileChange} />
+                  <input key={fileInputKey} ref={fileInputRef} id="image-upload" className="visually-hidden" type="file" accept="image/jpeg,image/png,image/webp" aria-label="Choisir une image JPEG, PNG ou WebP" tabIndex={-1} disabled={busy} onChange={onFileChange} />
                   {file && previewUrl ? (
                     <div className="file-preview">
-                      <img src={previewUrl} alt="Aperçu de l’image ajoutée" />
+                      <Image src={previewUrl} alt="Aperçu de l’image ajoutée" width={74} height={78} unoptimized />
                       <div className="file-preview__info"><span className="file-chip"><FileImage size={14} /> IMAGE CHARGÉE</span><strong>{file.name}</strong><small>{(file.size / (1024 * 1024)).toFixed(2)} Mo · aperçu local</small></div>
-                      <button className="icon-button remove-file" type="button" aria-label="Retirer l’image" onClick={() => { setFile(null); setAnalysis(null); setFileInputKey((key) => key + 1); }}><X size={16} /></button>
+                      <button className="icon-button remove-file" type="button" aria-label="Retirer l’image" disabled={busy} onClick={() => { setFile(null); setConsented(false); setAnalysis(null); setFileInputKey((key) => key + 1); }}><X size={16} /></button>
                     </div>
                   ) : (
-                    <button className="upload-prompt" type="button" onClick={() => fileInputRef.current?.click()}>
+                    <button className="upload-prompt" type="button" disabled={busy} onClick={() => fileInputRef.current?.click()}>
                       <span className="upload-symbol"><Upload size={19} strokeWidth={1.7} /></span>
                       <span className="upload-copy"><strong>Déposez votre image ici</strong><span>ou <u>parcourez vos fichiers</u></span></span>
                       <span className="upload-format">JPEG · PNG · WEBP<br />8 MO MAX.</span>
@@ -273,19 +291,19 @@ export default function Home() {
                 <div className="fields-row">
                   <div className="field-group">
                     <label className="field-label" htmlFor="claim">L’affirmation en circulation</label>
-                    <textarea id="claim" className="text-field text-field--claim" maxLength={500} value={claim} onChange={(event) => setClaim(event.target.value)} placeholder="Ex. « Cette photo a été prise hier à Toamasina. »" />
+                    <textarea id="claim" className="text-field text-field--claim" maxLength={500} value={claim} disabled={busy} onChange={(event) => { setClaim(event.target.value); setAnalysis(null); }} placeholder="Ex. « Cette photo a été prise hier à Toamasina. »" />
                     <div className="field-hint"><span>Ce que vous souhaitez vérifier</span><span>{claim.length}/500</span></div>
                   </div>
                   <div className="field-group">
                     <label className="field-label" htmlFor="context">Ce que vous savez déjà <span className="optional-label">OPTIONNEL</span></label>
-                    <textarea id="context" className="text-field text-field--context" maxLength={1200} value={context} onChange={(event) => setContext(event.target.value)} placeholder="Lien, date, lieu ou détails transmis par votre source…" />
+                    <textarea id="context" className="text-field text-field--context" maxLength={1200} value={context} disabled={busy} onChange={(event) => { setContext(event.target.value); setAnalysis(null); }} placeholder="Lien, date, lieu ou détails transmis par votre source…" />
                     <div className="field-hint"><span>Ces éléments guident la recherche</span><span>{context.length}/1200</span></div>
                   </div>
                 </div>
 
                 <div className="privacy-row">
                   <label className="consent-label">
-                    <input type="checkbox" checked={consented} onChange={(event) => setConsented(event.target.checked)} />
+                    <input type="checkbox" checked={consented} disabled={busy} onChange={(event) => setConsented(event.target.checked)} />
                     <span className="custom-checkbox"><Check size={12} /></span>
                     <span>Je comprends que l’image sera transmise à Gemini pour l’analyse.</span>
                   </label>
@@ -298,7 +316,7 @@ export default function Home() {
                   <button className="submit-button" type="submit" disabled={busy}>
                     {busy ? <><LoaderCircle className="spin" size={17} /> Analyse en cours</> : <>Lancer l’enquête <ArrowRight size={17} /></>}
                   </button>
-                  <button className="text-button" type="button" onClick={() => { setAnalysis(demoAnalysis); setError(""); }}>Voir un exemple <ArrowDownRight size={14} /></button>
+                  <button className="text-button" type="button" disabled={busy} onClick={() => { setAnalysis(demoAnalysis); setError(""); }}>Voir un exemple <ArrowDownRight size={14} /></button>
                 </div>
                 <p className="submit-note"><Info size={13} /> L’analyse apporte des pistes. La vérification éditoriale reste humaine.</p>
               </form>
@@ -315,7 +333,7 @@ export default function Home() {
               <div className="rail-rule" />
               <div className="rail-principle"><span className="rail-principle__num">01</span><div><strong>Pas de verdict automatique</strong><p>L’outil éclaire la décision. Le journaliste la prend.</p></div></div>
               <div className="rail-principle"><span className="rail-principle__num">02</span><div><strong>Les sources restent visibles</strong><p>Chaque piste utile doit pouvoir être consultée.</p></div></div>
-              <div className="rail-footnote"><ShieldCheck size={15} /> Des résultats prudents, une rédaction aux commandes.</div>
+                <div className="rail-footnote"><Check size={15} /> Des résultats prudents, une rédaction aux commandes.</div>
             </aside>
           </div>
 
@@ -325,7 +343,7 @@ export default function Home() {
                 <div><div className="panel-kicker">{analysis.isDemo ? "SCÉNARIO D’EXERCICE · SIMULATION" : "NOTE DE VÉRIFICATION · GEMINI"}</div><h2 id="result-heading">Ce que les éléments permettent de dire</h2></div>
                 <button className="copy-button" type="button" onClick={copyBrief}>{copied ? <Check size={15} /> : <Copy size={15} />}{copied ? "Copié" : "Copier la note"}</button>
               </div>
-              {analysis.isDemo && <div className="demo-banner"><Info size={16} /> Résultat simulé pour la démonstration. Aucune recherche ni source réelle n’a été consultée.</div>}
+              {analysis.isDemo && <div className="demo-banner"><Info size={16} /> Résultat simulé, sans lien avec une image déposée. Aucune recherche ni source réelle n’a été consultée.</div>}
               <div className="result-summary-grid">
                 <div className="result-status"><span className={`status-tag status-tag--${analysis.contextStatus}`}>{analysis.contextStatus === "supported" ? <Check size={14} /> : analysis.contextStatus === "contradicted" ? <CircleAlert size={14} /> : <Info size={14} />}{statusLabel(analysis.contextStatus)}</span><p>{analysis.summary}</p></div>
                 <div className="confidence-card"><span>CONFIANCE ÉDITORIALE</span><strong>{confidenceLabel(analysis.confidence)}</strong><div className="confidence-bars" aria-label={confidenceLabel(analysis.confidence)}><i className={analysis.confidence === "low" || analysis.confidence === "medium" || analysis.confidence === "high" ? "is-on" : ""} /><i className={analysis.confidence === "medium" || analysis.confidence === "high" ? "is-on" : ""} /><i className={analysis.confidence === "high" ? "is-on" : ""} /></div><small>Un repère, jamais une probabilité de vérité.</small></div>

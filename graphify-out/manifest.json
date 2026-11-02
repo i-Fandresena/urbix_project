@@ -1,0 +1,110 @@
+{
+  "MEMO_CONTEXTE_HACKATHON.md": {
+    "mtime": 1793621129.4379666,
+    "seen": 1793621163.1764638,
+    "ast_hash": "63b8371aea63033a75274d431cf78cdb",
+    "semantic_hash": ""
+  },
+  "analysis/transcripts/Hackathon_Besoins.txt": {
+    "mtime": 1793619064.5308628,
+    "seen": 1793619488.7302897,
+    "ast_hash": "9f7e74359e9480573bb8226d7d7652d8",
+    "semantic_hash": "9f7e74359e9480573bb8226d7d7652d8"
+  },
+  "analysis/transcripts/README.md": {
+    "mtime": 1793618943.7277615,
+    "seen": 1793619488.7302926,
+    "ast_hash": "b9241404eabf33819818498859382f83",
+    "semantic_hash": "b9241404eabf33819818498859382f83"
+  },
+  "web/eslint.config.mjs": {
+    "mtime": 1793620539.2676208,
+    "seen": 1793621163.1764321,
+    "ast_hash": "dfa1f5f6a7037bf39dc510f30b180002",
+    "semantic_hash": ""
+  },
+  "web/next.config.ts": {
+    "mtime": 1793620539.7175698,
+    "seen": 1793621163.1764405,
+    "ast_hash": "59ace8843cd0f04a4328b2189aead87b",
+    "semantic_hash": ""
+  },
+  "web/package.json": {
+    "mtime": 1793621247.684688,
+    "seen": 1793621540.5811732,
+    "ast_hash": "e3dd8e156bc9853b02cc5dbba870647f",
+    "semantic_hash": ""
+  },
+  "web/src/app/api/analyze/route.ts": {
+    "mtime": 1793620997.9243243,
+    "seen": 1793621163.1764476,
+    "ast_hash": "a0e51130aaea9d1040b8bf25494d74a1",
+    "semantic_hash": ""
+  },
+  "web/src/app/layout.tsx": {
+    "mtime": 1793620949.8039167,
+    "seen": 1793621163.1764507,
+    "ast_hash": "dd12fc2c87e328214d5cf235ae0e4ad4",
+    "semantic_hash": ""
+  },
+  "web/src/app/page.tsx": {
+    "mtime": 1793621403.0374238,
+    "seen": 1793621540.5811827,
+    "ast_hash": "14fdfd058710e8d0bf4996801826dde0",
+    "semantic_hash": ""
+  },
+  "web/tsconfig.json": {
+    "mtime": 1793620539.7185488,
+    "seen": 1793621163.1764553,
+    "ast_hash": "ee17fd1c97c735e9f3564e3f5251f125",
+    "semantic_hash": ""
+  },
+  "BRAND_GUIDELINES.md": {
+    "mtime": 1793621536.1401722,
+    "seen": 1793621540.5811858,
+    "ast_hash": "78aa23c81ec9031bc2912e28c264fddf",
+    "semantic_hash": ""
+  },
+  "CLAUDE.md": {
+    "mtime": 1793621140.8537855,
+    "seen": 1793621163.1764598,
+    "ast_hash": "0ff242ff724e4f3b56adec6a8c372325",
+    "semantic_hash": ""
+  },
+  "PRODUCT_SPEC.md": {
+    "mtime": 1793621125.328089,
+    "seen": 1793621163.1764667,
+    "ast_hash": "bb3bbf81fef79ef5646ba1cbf69a10f8",
+    "semantic_hash": ""
+  },
+  "README.md": {
+    "mtime": 1793621565.7611103,
+    "seen": 1793621591.4055817,
+    "ast_hash": "b602926a8af866c3a96d0b0e832d3b39",
+    "semantic_hash": ""
+  },
+  "web/README.md": {
+    "mtime": 1793620911.4205346,
+    "seen": 1793621163.1764815,
+    "ast_hash": "c22c1d290a5038f1a1475c15ebb8dc53",
+    "semantic_hash": ""
+  },
+  "web/src/app/icon.svg": {
+    "mtime": 1793621116.474119,
+    "seen": 1793621163.1764975,
+    "ast_hash": "37df865a329e8f3f9f93890ae5aa938b",
+    "semantic_hash": ""
+  },
+  "web/scripts/generate-brand-icon.mjs": {
+    "mtime": 1793621236.4400094,
+    "seen": 1793621540.581176,
+    "ast_hash": "3016c3bb77fb17d25c8d1620d22fded8",
+    "semantic_hash": ""
+  },
+  "web/package-lock.json": {
+    "mtime": 1793621155.605141,
+    "seen": 1793621163.1765006,
+    "ast_hash": "427a4dec2c5045f7537f34301d0c9882",
+    "semantic_hash": ""
+  }
+}

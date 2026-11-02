@@ -1,41 +1,29 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+# Graphify local extraction cache and machine-specific scan paths
+graphify-out/cache/
+graphify-out/.graphify_python
+graphify-out/.graphify_root
+graphify-out/.graphify_build_state.json
+graphify-out/.graphify_labels.pending.json
+graphify-out/20??-??-??/
 
-# dependencies
-/node_modules
-/.pnp
-.pnp.*
-.yarn/*
-!.yarn/patches
-!.yarn/plugins
-!.yarn/releases
-!.yarn/versions
+# Next.js app and packages
+web/node_modules/
+web/.next/
+web/out/
+web/.turbo/
+web/coverage/
 
-# testing
-/coverage
-
-# next.js
-/.next/
-/out/
-
-# production
-/build
-
-# misc
-.DS_Store
-*.pem
-
-# debug
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-.pnpm-debug.log*
-
-# env files (can opt-in for committing if needed)
+# Secrets and local environment files (keep templates only)
 .env*
+!.env.example
+web/.env*
+!web/.env.example
+web/.env.local
+web/.env.*.local
 
-# vercel
-.vercel
+# Local competition source material; keep the repository limited to the product
+Hackathon_Besoins.mp4
+42_Antananarivo_Standard_Livraison_Hackathons.pdf
 
-# typescript
-*.tsbuildinfo
-next-env.d.ts
+# Local visual review capture
+hamarino-preview.png

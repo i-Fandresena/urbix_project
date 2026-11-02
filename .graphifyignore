@@ -1,0 +1,10 @@
+﻿tmp/
+graphify-out/
+.codex/
+AGENTS.md
+web/node_modules/
+web/.next/
+web/out/
+web/.turbo/
+web/coverage/
+web/.env*
