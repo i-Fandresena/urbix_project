@@ -11,7 +11,7 @@ import {
   unmarkedMarkup,
   unmarkedScript,
 } from '../../scripts/i18n.mjs';
-import { LOCALES } from './locale.js';
+import { LOCALES, PARTIAL_LOCALES } from './locale.js';
 
 const messages = extractMessages();
 
@@ -30,7 +30,11 @@ for (const locale of shippedLocales()) {
       messages,
     );
     assert.deepEqual(
-      { missing, stale, errors },
+      {
+        missing: PARTIAL_LOCALES.includes(locale) ? [] : missing,
+        stale,
+        errors,
+      },
       { missing: [], stale: [], errors: [] },
     );
   });

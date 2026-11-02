@@ -14,6 +14,7 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { PARTIAL_LOCALES } from '../src/i18n/locale.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const LOCALES_DIR = path.join(ROOT, 'src/i18n/locales');
@@ -649,12 +650,18 @@ function main(args) {
       for (const text of stale) console.log(`  ${JSON.stringify(text)}`);
     }
     if (missing.length) {
-      failed = true;
-      console.log(
-        `${locale}: ${missing.length} missing (npm run i18n -- --missing ${locale}):`,
-      );
-      for (const text of missing)
-        console.log(`  ${JSON.stringify(text)}  ${messages.get(text).where}`);
+      if (PARTIAL_LOCALES.includes(locale)) {
+        console.log(
+          `${locale}: ${messages.size - missing.length}/${messages.size} translated; ${missing.length} use the English fallback (preview locale)`,
+        );
+      } else {
+        failed = true;
+        console.log(
+          `${locale}: ${missing.length} missing (npm run i18n -- --missing ${locale}):`,
+        );
+        for (const text of missing)
+          console.log(`  ${JSON.stringify(text)}  ${messages.get(text).where}`);
+      }
     }
     for (const error of errors) {
       failed = true;

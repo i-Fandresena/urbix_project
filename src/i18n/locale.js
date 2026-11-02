@@ -16,12 +16,16 @@ export const LOCALES = Object.freeze([
   'fr',
   'it',
   'ja',
+  'mg',
   'pt',
   'ru',
   'uk',
   'zh-CN',
   'zh-Hant',
 ]);
+
+/** Locales intentionally released as partial previews with English fallback. */
+export const PARTIAL_LOCALES = Object.freeze(['mg']);
 
 /** Each locale named in its own language, for the selector. */
 export const LOCALE_NAMES = Object.freeze({
@@ -32,6 +36,7 @@ export const LOCALE_NAMES = Object.freeze({
   fr: 'Français',
   it: 'Italiano',
   ja: '日本語',
+  mg: 'Malagasy',
   pt: 'Português (Brasil)',
   ru: 'Русский',
   uk: 'Українська',

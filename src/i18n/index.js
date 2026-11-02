@@ -24,6 +24,7 @@ import es from './locales/es.json' with { type: 'json' };
 import fr from './locales/fr.json' with { type: 'json' };
 import it from './locales/it.json' with { type: 'json' };
 import ja from './locales/ja.json' with { type: 'json' };
+import mg from './locales/mg.json' with { type: 'json' };
 import pt from './locales/pt.json' with { type: 'json' };
 import ru from './locales/ru.json' with { type: 'json' };
 import uk from './locales/uk.json' with { type: 'json' };
@@ -37,6 +38,7 @@ const CATALOGS = Object.freeze({
   fr,
   it,
   ja,
+  mg,
   pt,
   ru,
   uk,
