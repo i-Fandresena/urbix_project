@@ -1,4 +1,5 @@
 import { GoogleGenAI } from "@google/genai";
+import { createClient as createSupabaseServerClient, isSupabaseConfigured } from "@/lib/supabase/server";
 import sharp from "sharp";
 
 export const maxDuration = 60;
@@ -125,6 +126,16 @@ Retourne uniquement le JSON correspondant au schéma demandé. Les sources cité
 }
 
 export async function POST(request: Request) {
+  if (!isSupabaseConfigured()) {
+    return Response.json({ error: "La connexion Supabase n’est pas configurée sur ce serveur." }, { status: 503 });
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { data: authData, error: authError } = await supabase.auth.getClaims();
+  if (authError || !authData?.claims?.sub) {
+    return Response.json({ error: "Connectez-vous pour lancer une analyse." }, { status: 401 });
+  }
+
   if (!process.env.GEMINI_API_KEY) {
     return Response.json(
       { error: "Gemini n’est pas configuré. Ajoutez une nouvelle clé dans web/.env.local, puis relancez le serveur." },
@@ -191,13 +202,14 @@ export async function POST(request: Request) {
 
     const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
     const interaction = await ai.interactions.create({
-      model: "gemini-3.8-flash",
+      model: "gemini-2.5-flash",
       input: [
         { type: "text", text: makePrompt(claim, context) },
         { type: "image", data: normalizedImage.toString("base64"), mime_type: "image/jpeg" },
       ],
       tools: [{ type: "google_search" }],
       response_format: { type: "text", mime_type: "application/json", schema: responseSchema },
+      store: false,
     });
 
     const result = interaction as unknown as { output_text?: string; steps?: unknown };
@@ -218,7 +230,13 @@ export async function POST(request: Request) {
     };
 
     return Response.json({ analysis });
-  } catch {
+  } catch (error) {
+    if (isRecord(error) && error.status === 429) {
+      return Response.json(
+        { error: "Une limite de quota ou de fréquence Gemini est atteinte. Vérifiez que le projet Google AI Studio reste au forfait gratuit, puis réessayez plus tard." },
+        { status: 429 },
+      );
+    }
     return Response.json({ error: "Le service d’analyse est momentanément indisponible. Vérifiez la configuration Gemini et réessayez." }, { status: 502 });
   }
 }

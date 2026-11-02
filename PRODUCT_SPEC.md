@@ -16,11 +16,13 @@ Les journalistes à Madagascar reçoivent des photos et vidéos dont le lieu, la
 2. Il saisit l’affirmation à vérifier et un contexte optionnel (source, date, lieu, lien).
 3. Avant l’envoi, il confirme que le fichier sera transmis à Gemini pour l’analyse.
 4. Le serveur vérifie le format réel, limite les dimensions et réencode l’image en mémoire afin de retirer les métadonnées EXIF et de réduire le poids.
-5. Gemini examine les éléments visuels, utilise Google Search pour le recoupement, puis retourne un objet structuré.
+5. Gemini 2.5 Flash examine les éléments visuels, utilise Google Search pour le recoupement, puis retourne un objet structuré. L’appel désactive le stockage d’interaction (`store: false`).
 6. Hamarino présente séparément observations visuelles, contexte, niveau de convergence, limites, étapes suivantes et liens de citations retournés par Google Search.
 7. Le journaliste ouvre les sources, réalise les vérifications proposées et copie une note partageable.
 
 Un exemple d’interface est disponible sans clé Gemini. Il est **simulé**, ne cite aucune source et ne doit jamais être présenté au jury comme un fait vérifié.
+
+Le parcours d’accès démarre sur la landing `/`, puis mène à `/connexion` (création ou connexion Supabase) avant l’espace `/verification`. La landing comporte une prévisualisation mobile et un emplacement de téléchargement. L’APK n’est pas publiable tant qu’une URL publique n’est pas disponible : l’application Android doit joindre le serveur Next.js pour authentifier l’utilisateur et appeler Gemini sans embarquer la clé.
 
 ## 3. États et règles éditoriales
 
@@ -35,23 +37,33 @@ Un exemple d’interface est disponible sans clé Gemini. Il est **simulé**, ne
 ## 4. Architecture actuelle
 
 - `web/` : Next.js App Router, TypeScript, React, CSS global responsive.
-- `web/src/app/page.tsx` : interface et état local du formulaire/résultat.
+- `web/src/app/page.tsx` : landing publique et présentation du produit.
+- `web/src/app/connexion/` : création de compte, connexion et demande de réinitialisation.
+- `web/src/app/verification/` : interface et état local du formulaire/résultat.
+- `web/src/proxy.ts` : renouvellement de session, redirections d’authentification et protection des routes.
+- `web/src/lib/supabase/` : clients navigateur/serveur et rafraîchissement des sessions.
 - `web/src/app/api/analyze/route.ts` : route serveur d’analyse, Gemini Interactions API et recherche Google.
+- Supabase Auth : sessions par cookies, confirmation d’adresse e-mail et authentification protégée de la route d’analyse.
 - `@google/genai` : SDK officiel Gemini.
 - `sharp` : lecture réelle du format, normalisation et retrait des métadonnées par réencodage en mémoire.
 - `geist` : polices auto-hébergées, sans requête externe pour les polices.
 - `lucide-react` : pictogrammes fonctionnels.
-- Aucun compte utilisateur, stockage d’image, base de données, suivi analytique ou journal de recherches n’est installé.
+- Aucun dossier de vérification, stockage d’image, suivi analytique ou journal de recherches n’est installé. Supabase conserve les données minimales de compte et de session.
 
 ## 5. Sécurité et confidentialité du MVP
 
 - La variable `GEMINI_API_KEY` est utilisée exclusivement dans la route serveur. Aucun préfixe `NEXT_PUBLIC_`.
 - La clé publiée dans la conversation doit être révoquée/rotée. Ne pas la remettre dans le dépôt, le README, un fichier d’équipe, un ticket ou une conversation. Créer une clé d’autorisation neuve dans Google AI Studio et la saisir localement dans `web/.env.local`.
 - Le fichier n’est jamais écrit sur disque par l’application : il est reçu et normalisé en mémoire, puis transmis à l’API Gemini après consentement.
+- Le projet Gemini doit rester au forfait **Free**, sans compte de facturation associé. L’application n’a aucun basculement payant. Google publie 500 requêtes Google Search par jour au forfait gratuit (quota partagé avec Flash-Lite) ; les limites peuvent changer et une demande peut être refusée une fois une limite atteinte.
+- L’authentification utilise le projet **Supabase Free** ; ne pas ajouter une clé service-role ou de formule payante. Le fournisseur d’e-mail intégré est limité à 2 messages par heure et les projets Free peuvent être mis en pause après une semaine d’inactivité. Vérifier ces limites avant le pitch ([tarifs Supabase](https://supabase.com/pricing), [limites e-mail Auth](https://supabase.com/docs/guides/auth/rate-limits)).
+- Les pages de connexion et d’inscription vérifient l’identité via Supabase et la session est protégée par cookies SSR. La route d’analyse revalide la session côté serveur ; la clé Gemini reste exclusivement côté serveur.
+- Les conditions du forfait gratuit autorisent Google à utiliser prompts et réponses pour améliorer ses produits. Le consentement de l’interface l’indique ; réserver la démo à des images autorisées, publiques et non sensibles.
+- L’appel Interactions utilise `store: false` pour ne pas conserver la requête/réponse dans l’historique des interactions Google. Cela ne change pas les conditions d’utilisation des données du forfait gratuit.
 - La suppression EXIF élimine des métadonnées utiles comme coordonnées et date ; Hamarino ne sert donc pas de chaîne de conservation de preuve. Conserver le fichier original dans un système rédactionnel maîtrisé si l’enquête l’exige.
 - Les images, le prompt et l’affirmation sont des données non fiables. Les éventuelles instructions visibles dans l’image ne doivent pas modifier la politique du modèle.
 - Limite de taille : 8 Mo. Formats réels acceptés : JPEG, PNG, WebP. Dimensions plafonnées à 25 mégapixels en entrée, puis 1800 px max avant envoi.
-- Le MVP n’a pas encore de compte, de contrôle d’accès, de limitation distribuée de requêtes, ni de journal d’audit. Avant un déploiement public, Claude doit proposer une limitation d’abus placée à la frontière de confiance réelle, une règle de rétention côté fournisseur et une revue de la configuration de production.
+- Le MVP n’a pas encore de limitation distribuée de requêtes, de dossiers par utilisateur, ni de journal d’audit. Avant un déploiement public, Claude doit proposer une limitation d’abus placée à la frontière de confiance réelle, une règle de rétention côté fournisseur et une revue de la configuration de production.
 - Vérifier les conditions de l’API Google applicables aux images et prompts avant d’utiliser des contenus sensibles ou confidentiels. Le consentement dans l’interface ne remplace pas la validation éditoriale/juridique.
 
 ## 6. Hors périmètre aujourd’hui
@@ -59,7 +71,8 @@ Un exemple d’interface est disponible sans clé Gemini. Il est **simulé**, ne
 - Vérification complète de vidéo ou extraction automatique de séquences.
 - Recherche inversée d’image dédiée, provenance cryptographique ou analyse médico-légale de manipulation.
 - Annuaire vérifié d’experts, contacts publics, statistiques actualisées et veille régionale.
-- Mode hors-ligne/satellite, application mobile et upload en réseau intermittent.
+- APK Android signé, publication du fichier et hébergement public du binaire ; la conception landing/mobile existe mais nécessite une URL de serveur public avant de construire une version distribuable.
+- Mode hors-ligne/satellite et upload reprenable sur réseau intermittent.
 - Publication d’une interface malgache ou anglaise sans relecture humaine.
 - Gestion de dossiers, collaboration rédactionnelle, hébergement d’images ou rétention de preuves.
 
@@ -89,6 +102,8 @@ La démo réelle doit utiliser une clé de remplacement neuve, une image dont l�
 - Obtenir le règlement IFM spécifique, le format de démo, la durée et l’échéance.
 - Valider le nom et le sens exact de « Hamarino » avec un locuteur malgache natif.
 - Choisir une image de démonstration avec licence/autorisation et un fait qui se recoupe dans des sources ouvertes.
-- Préparer une clé Gemini de remplacement, la restreindre, contrôler quotas et coûts, et ne pas la partager dans le chat.
+- Préparer une nouvelle clé Gemini dans un projet dont le statut reste **Free**, sans compte de facturation lié, surveiller les quotas gratuits et ne pas partager la clé dans le chat.
+- Créer un projet Supabase Free, renseigner les variables locales, ajouter les URLs de retour autorisées, puis créer un premier compte avant la démo.
+- Choisir une URL publique gratuite pour héberger Next.js ; elle est nécessaire aux e-mails de confirmation et à l’APK Android. Préparer ensuite la signature Android et le lien de téléchargement.
 - Faire relire les termes de consentement et les langues par l’équipe éditoriale.
 - Demander à Claude Code la revue sécurité, la mise en mouvement Framer Motion et l’amélioration UX décrites dans `CLAUDE.md`.

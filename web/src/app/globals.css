@@ -56,6 +56,8 @@ a { color: inherit; }
 .sidebar__bottom strong { color: #34423a; font-size: 11px; }
 .sidebar__bottom div span { margin-top: 3px; color: #989990; font-size: 9px; }
 .sidebar__team-arrow { margin-left: auto; color: #999b91; }
+.sidebar__signout { display: grid; width: 30px; height: 30px; place-items: center; margin-left: auto; border: 1px solid transparent; background: transparent; color: #858b80; cursor: pointer; }
+.sidebar__signout:hover { border-color: var(--line-dark); color: var(--moss-dark); }
 
 .main-area { min-height: 100vh; margin-left: 250px; }
 .topbar { position: sticky; top: 0; z-index: 3; display: flex; height: 59px; align-items: center; justify-content: space-between; padding: 0 clamp(24px, 4.2vw, 64px); border-bottom: 1px solid var(--line); background: rgb(246 245 239 / 93%); backdrop-filter: blur(12px); }
@@ -127,6 +129,7 @@ h1, h2, h3, p { margin-top: 0; }
 .consent-label input:checked + .custom-checkbox { border-color: var(--moss); background: var(--moss); color: white; }
 .consent-label input:focus-visible + .custom-checkbox { outline: 3px solid #829f4b; outline-offset: 3px; }
 .privacy-detail { display: inline-flex; align-items: center; gap: 5px; flex: 0 0 auto; color: #747e72; font-size: 9px; }
+.privacy-footnote { margin: 7px 0 0; color: #8b7664; font-size: 9px; line-height: 1.5; }
 .form-actions { display: flex; align-items: center; gap: 17px; margin-top: 16px; }
 .submit-button { display: inline-flex; min-height: 40px; align-items: center; justify-content: center; gap: 14px; padding: 0 16px; border: 1px solid var(--moss-dark); background: var(--moss-dark); color: #fbfaf4; font-size: 11px; font-weight: 600; cursor: pointer; }
 .submit-button:hover:not(:disabled) { background: #1d382d; }

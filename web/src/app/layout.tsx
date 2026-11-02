@@ -2,10 +2,11 @@ import type { Metadata } from "next";
 import { GeistSans } from "geist/font/sans";
 import { GeistSerifRegular } from "geist/font/serif/regular";
 import "./globals.css";
+import "./marketing.css";
 
 export const metadata: Metadata = {
   title: "Hamarino — Chaque image mérite ses sources",
-  description: "Un espace de vérification visuelle et de recoupement des sources pour les journalistes à Madagascar. Par Urbix.",
+  description: "Hamarino aide les rédactions à examiner les images, retrouver des sources consultables et vérifier leur contexte.",
   applicationName: "Hamarino",
   keywords: ["journalisme", "vérification", "Madagascar", "image", "sources"],
   icons: { icon: [{ url: "/icon.svg", type: "image/svg+xml" }] },
