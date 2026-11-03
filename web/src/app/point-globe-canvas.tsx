@@ -181,7 +181,7 @@ export function PointGlobeCanvas() {
     let disposed = false;
     let mapPixels: Uint8ClampedArray | null = null;
     let projection: GlobeProjection | null = null;
-    let frameCanvas = document.createElement("canvas");
+    const frameCanvas = document.createElement("canvas");
     let frameContext = frameCanvas.getContext("2d");
 
     const paintFallback = () => {
@@ -265,11 +265,11 @@ export function PointGlobeCanvas() {
       }
 
       const latitudeRadians = Math.PI / 180;
-      LIGHTS.forEach((light, index) => {
+      for (const [index, light] of LIGHTS.entries()) {
         const latitude = light.latitude * latitudeRadians;
         const longitudeDelta = (light.longitude - CENTER_LONGITUDE) * latitudeRadians - rotation;
         const depth = Math.cos(latitude) * Math.cos(longitudeDelta);
-        if (depth <= 0.08) return;
+        if (depth <= 0.08) continue;
         const x = centerX + Math.cos(latitude) * Math.sin(longitudeDelta) * radiusX;
         const y = centerY - Math.sin(latitude) * radiusY;
         const hue = (animationTime / 55 + index * 37) % 360;
@@ -288,7 +288,7 @@ export function PointGlobeCanvas() {
         frameContext.arc(x, y, pulse * 0.55, 0, TWO_PI);
         frameContext.fill();
         frameContext.restore();
-      });
+      }
 
       frameContext.restore();
       context.clearRect(0, 0, canvas.width, canvas.height);

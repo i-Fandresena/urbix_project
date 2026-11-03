@@ -50,7 +50,10 @@ export function PreferencesProvider({
     const storedTheme = readPreferenceCookie("laverta-theme");
     const nextLocale = storedLocale ? normalizeLocale(storedLocale) : locale;
     const nextTheme = storedTheme === "dark" ? "dark" : storedTheme === "light" ? "light" : theme;
+    // Les cookies ne sont lisibles qu’après l’hydratation : la synchronisation se fait donc ici.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (locale !== nextLocale) setLocaleState(nextLocale);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (theme !== nextTheme) setTheme(nextTheme);
     document.documentElement.lang = nextLocale;
     document.documentElement.dataset.theme = nextTheme;

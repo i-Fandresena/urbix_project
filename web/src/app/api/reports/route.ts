@@ -71,7 +71,7 @@ export async function POST(request: Request) {
   if (uploadedFile && !isMediaEncryptionConfigured()) return Response.json({ error: "Le stockage chiffré des images n’est pas configuré. Ajoutez LAVERTA_MEDIA_ENCRYPTION_KEY dans web/.env.local." }, { status: 503 });
 
   try {
-    let media: Awaited<ReturnType<typeof prepareMedia>> = null;
+    let media: Awaited<ReturnType<typeof prepareMedia>> | null = null;
     if (uploadedFile) media = await prepareMedia(uploadedFile);
     await purgeExpiredReports();
     const trackingCode = await createReport({

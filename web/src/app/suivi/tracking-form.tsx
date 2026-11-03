@@ -40,6 +40,8 @@ export default function TrackingForm() {
     try { fromFragment = decodeURIComponent(fromFragment); } catch { fromFragment = ""; }
     fromFragment = fromFragment.trim();
     if (!fromFragment) return;
+    // Le fragment d’URL n’existe que dans le navigateur : il est lu une fois après l’hydratation.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setCode(fromFragment);
     void lookup(fromFragment);
     // Initial fragment is intentionally read once, after hydration.
