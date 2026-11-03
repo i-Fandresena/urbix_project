@@ -33,8 +33,9 @@ function AuthArtwork({ t }: { t: (key: MessageKey) => string }) {
   );
 }
 
-export default async function ConnexionPage() {
+export default async function ConnexionPage(props: { searchParams: Promise<{ configuration?: string }> }) {
   const locale = await getServerLocale();
+  const { configuration } = await props.searchParams;
   const t = (key: MessageKey) => translate(locale, key);
   const configured = isAuthConfigured();
   let authenticated = false;
@@ -50,7 +51,8 @@ export default async function ConnexionPage() {
       console.error("Better Auth could not validate the session against PostgreSQL.", code);
     }
   }
-  if (authenticated) redirect("/verification");
+  // A configuration error came from /verification; bouncing back there would loop forever.
+  if (authenticated && configuration === undefined) redirect("/verification");
 
   return (
     <main className="auth-page">
