@@ -6,6 +6,14 @@ L’application de web/ comprend maintenant le signalement sans compte, le stock
 
 Le dossier inclut une vidéo de besoin IFM, le PDF de stratégie Laverta et un document général de 42 Antananarivo. Ce dernier n’est pas le règlement particulier de l’IFM. La synthèse distingue les informations fournies par l’équipe, les objectifs du PDF et les recommandations de conception.
 
+## Application en production
+
+L’application est opérationnelle : **https://laverta.aura-plus.site** (base publique des vérifications : https://laverta.aura-plus.site/verifications, santé : https://api-laverta.aura-plus.site/api/health).
+
+**Besoins couverts et testés en production** : signalement anonyme sans compte (web) et via le bot Messenger, code de suivi LV, file de rédaction priorisée avec regroupement des doublons et alertes de pic, rôles (administrateur, rédacteur en chef, journaliste, correspondant, organisme) sur invitation, transmission anonymisée aux organismes et réponse officielle, verdict humain sourcé, base publique des vérifications, réponse instantanée aux rumeurs déjà vérifiées, visuels FAUX/VRAI/TROMPEUR en FR/MG/EN, statistiques d’impact, e-mails de confirmation et de notification.
+
+**Pas encore couvert** : analyse IA dans la fiche (OCR, extraction, langue), recherche inversée de photos, sources officielles RSS, simulateur USSD/SMS, application mobile, WhatsApp. Détails : PRODUCT_SPEC.md.
+
 ## Prototype disponible
 
 - Landing publique et connexion par e-mail avec Better Auth/PostgreSQL.
