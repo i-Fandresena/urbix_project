@@ -15,6 +15,9 @@ web/out/
 web/.turbo/
 web/coverage/
 
+# Local exports of Messenger reports (personal data)
+web/exports/
+
 # Secrets and local environment files (keep templates only)
 .env*
 !.env.example

@@ -58,6 +58,36 @@ L’application utilise `gemini-2.5-flash` et Google Search, disponibles au forf
 
 Le forfait gratuit peut utiliser les prompts et réponses pour améliorer les produits Google. Pour la démo, utilisez uniquement une image autorisée, publique et non sensible. L’appel est envoyé avec `store: false` ; Hamarino ne stocke pas les images ni l’historique. Consultez la documentation officielle sur [la gestion des clés Gemini](https://ai.google.dev/gemini-api/docs/api-key), [la facturation et les forfaits](https://ai.google.dev/gemini-api/docs/billing), [les tarifs et quotas](https://ai.google.dev/gemini-api/docs/pricing), [l’Interactions API](https://ai.google.dev/gemini-api/docs/interactions-overview) et [Google Search grounding](https://ai.google.dev/gemini-api/docs/google-search).
 
+## Bot Messenger (prototype)
+
+Le bot de la Page Facebook Laverta reçoit des signalements dans Messenger. Il demande successivement :
+- le type : information douteuse ou rumeur à vérifier ;
+- le thème et le contenu ;
+- le lieu de diffusion et la ville ou région ;
+- la confirmation.
+
+Chaque question affiche aussi ses choix numérotés. On peut répondre avec un bouton, en tapant le numéro ou en tapant le nom de l’option (« 2 », « Santé », « Passer »). Le bot reste ainsi utilisable dans les applications qui n’affichent pas les boutons.
+
+Chaque signalement confirmé reçoit un code `LV-XXXXXX`. La personne suit ses signalements avec le bouton « Suivre un dossier », sans avoir à retenir le code, ou en écrivant `SUIVI LV-XXXXXX`. Chaque statut est expliqué par une phrase, par exemple « Bien reçu : un journaliste va l’examiner. ». Le bot n’appelle pas Gemini et ne rend aucun verdict.
+
+Au premier message, le bot demande la langue, puis la garde pour les échanges suivants (bouton « Changer de langue »). Tous les textes sont dans `web/src/lib/messenger-messages.ts` :
+- **Français :** texte de référence.
+- **Anglais :** premier jet à faire relire avant une démonstration publique.
+- **Malgache :** à écrire par un locuteur natif. Il apparaît automatiquement dans le choix de langue quand chaque texte est rempli, garde les mêmes champs que le français (`{code}`, `{date}`, `{status}`…) et que chaque titre de bouton tient en 20 caractères.
+
+Seul le texte est enregistré dans PostgreSQL. Les photos et fichiers ne sont ni téléchargés ni conservés : le bot en note le nombre et demande une description écrite. Un brouillon non confirmé est supprimé après 24 heures.
+
+Mise en route depuis `web/` :
+
+1. Renseigner `MESSENGER_PAGE_ACCESS_TOKEN`, `MESSENGER_APP_SECRET` et `MESSENGER_VERIFY_TOKEN` dans `.env.local` (voir `.env.example`).
+2. Créer les tables avec `npm run db:migrate:signalements`.
+3. Lancer `npm run dev`, puis exposer le port 3000 en HTTPS, par exemple avec `cloudflared tunnel --url http://localhost:3000`.
+4. Dans l’application Meta, déclarer `https://<adresse-du-tunnel>/api/messenger/webhook` avec le jeton de vérification, puis abonner la Page aux champs `messages` et `messaging_postbacks`.
+
+Tant que l’application Meta n’a pas passé l’App Review, seules les personnes qui ont un rôle sur l’application peuvent utiliser le bot.
+
+Pour récupérer les signalements, `npm run signalements:export` crée un fichier CSV dans `web/exports/`, dossier ignoré par Git. Le fichier s’ouvre dans Excel et ne contient pas l’identifiant Messenger des signaleurs. Il contient malgré tout des données personnelles : ne pas le partager hors de l’équipe.
+
 ## Architecture
 
 - `web/src/app/page.tsx` — landing publique.
@@ -67,6 +97,8 @@ Le forfait gratuit peut utiliser les prompts et réponses pour améliorer les pr
 - `web/src/lib/auth-client.ts` — client d’authentification du formulaire.
 - `web/src/proxy.ts` — redirections optimistes ; les pages et l’API valident la session dans PostgreSQL.
 - `web/src/app/api/analyze/route.ts` — validation, normalisation en mémoire et appel Gemini côté serveur.
+- `web/src/app/api/messenger/webhook/route.ts` — webhook du bot Messenger : signature Meta vérifiée, réponse envoyée après l’accusé de réception.
+- `web/src/lib/messenger-flow.ts` et `web/src/lib/signalements.ts` — parcours de conversation et stockage des signalements.
 - `PRODUCT_SPEC.md` — état du MVP, choix produit, règles éditoriales et limites connues.
 - `BRAND_GUIDELINES.md` — identité visuelle et principes UI.
 - `CLAUDE.md` — handoff à Claude Code pour la sécurité et Framer Motion.
@@ -79,6 +111,8 @@ Commandes depuis `web/` :
 npm run dev
 npm run db:start
 npm run db:migrate
+npm run db:migrate:signalements
+npm run signalements:export
 npm run db:stop
 npm run build
 npm run lint
@@ -89,6 +123,7 @@ npm run lint
 - Le consentement annonce explicitement que le fichier est transmis à Gemini.
 - Hamarino ne sauvegarde ni l’image ni son historique ; la réception et le traitement se font en mémoire côté serveur, et l’appel Interactions est envoyé avec `store: false`. Le forfait gratuit Google peut utiliser les prompts et réponses pour améliorer ses produits : ne pas envoyer de contenus sensibles ou confidentiels.
 - PostgreSQL conserve les données nécessaires au compte et à la session. Aucun dossier de vérification ni image n’est associé à ce compte dans cette version.
+- Le bot Messenger conserve le texte des signalements confirmés et l’identifiant Messenger de leur auteur, sans photo ni fichier. Leur durée de conservation reste à fixer avant une ouverture publique.
 - Le réencodage retire les métadonnées EXIF. Le produit n’est donc pas un outil de conservation des originaux ni une chaîne de preuve forensique.
 - Un outil de recherche web peut trouver des sources récentes, mais cela ne signifie pas qu’il a retrouvé la première publication d’une image.
 - Pas de recherche inversée d’image, d’analyse médico-légale, de traitement vidéo, de mode hors-ligne, d’annuaire de contacts ni de couverture multilingue dans ce MVP.

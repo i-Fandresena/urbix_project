@@ -1,20 +1,12 @@
 import { betterAuth } from "better-auth";
-import { Pool } from "pg";
 import nodemailer from "nodemailer";
 import { isEmailDeliveryConfigured, trustedOrigins } from "@/lib/auth-config";
+import { pool } from "@/lib/db";
 
-const databaseUrl = process.env.DATABASE_URL;
 const smtpUrl = process.env.AUTH_SMTP_URL;
 const emailFrom = process.env.AUTH_EMAIL_FROM;
 const emailDeliveryConfigured = isEmailDeliveryConfigured();
 const smtp = emailDeliveryConfigured && smtpUrl ? nodemailer.createTransport(smtpUrl) : null;
-
-const pool = databaseUrl ? new Pool({
-  connectionString: databaseUrl,
-  max: 5,
-  idleTimeoutMillis: 30_000,
-  connectionTimeoutMillis: 5_000,
-}) : null;
 
 async function sendAuthEmail(to: string, subject: string, text: string) {
   if (!smtp || !emailFrom) throw new Error("La livraison SMTP n’est pas configurée.");

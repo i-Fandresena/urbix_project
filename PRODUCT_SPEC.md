@@ -44,12 +44,13 @@ Le parcours d’accès démarre sur la landing `/`, puis mène à `/connexion` (
 - `web/src/lib/auth.ts` : Better Auth, pool PostgreSQL et e-mails SMTP facultatifs.
 - `web/src/app/api/auth/[...all]/route.ts` : endpoints Better Auth.
 - `web/src/app/api/analyze/route.ts` : route serveur d’analyse, Gemini Interactions API et recherche Google.
+- `web/src/app/api/messenger/webhook/route.ts`, `web/src/lib/messenger-flow.ts` et `web/src/lib/signalements.ts` : bot Messenger de la Page Laverta, qui recueille des signalements texte sans appeler Gemini.
 - Better Auth avec PostgreSQL (`pg`) : comptes e-mail/mot de passe, mots de passe hachés et sessions par cookies ; SMTP est facultatif pour la confirmation et la récupération par e-mail.
 - `@google/genai` : SDK officiel Gemini.
 - `sharp` : lecture réelle du format, normalisation et retrait des métadonnées par réencodage en mémoire.
 - `geist` : polices auto-hébergées, sans requête externe pour les polices.
 - `lucide-react` : pictogrammes fonctionnels.
-- Aucun dossier de vérification, stockage d’image, suivi analytique ou journal de recherches n’est installé. PostgreSQL conserve les données minimales de compte, les mots de passe hachés et les sessions.
+- Aucun dossier de vérification, stockage d’image, suivi analytique ou journal de recherches n’est installé. PostgreSQL conserve les données minimales de compte, les mots de passe hachés et les sessions. Pour le bot Messenger, il conserve aussi le texte des signalements confirmés, les brouillons de moins de 24 heures et la langue choisie par chaque contact.
 
 ## 5. Sécurité et confidentialité du MVP
 

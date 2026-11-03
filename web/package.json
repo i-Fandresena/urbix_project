@@ -10,7 +10,9 @@
     "icons:build": "node scripts/generate-brand-icon.mjs",
     "db:start": "docker compose -f compose.yaml up -d postgres",
     "db:stop": "docker compose -f compose.yaml down",
-    "db:migrate": "dotenv -e .env.local -- npx auth@latest migrate --yes --config ./src/lib/auth.ts"
+    "db:migrate": "dotenv -e .env.local -- npx auth@latest migrate --yes --config ./src/lib/auth.ts",
+    "db:migrate:signalements": "dotenv -e .env.local -- node scripts/migrate-signalements.mjs",
+    "signalements:export": "dotenv -e .env.local -- node scripts/export-signalements.mjs"
   },
   "dependencies": {
     "@google/genai": "^2.32.0",
