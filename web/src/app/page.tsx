@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Activity, ArrowDown, ArrowRight, ArrowUpRight, BadgeCheck, Check, Eye, FileCheck2, LockKeyhole, Search, Share2, ShieldCheck } from "lucide-react";
 import { BrandLockup } from "./brand-lockup";
 import { LandingMotion, Reveal, RevealArticle } from "./landing-motion";
+import { MethodIntro } from "./method-intro";
 import { PointGlobeCanvas } from "./point-globe-canvas";
 import { getServerLocale } from "@/lib/i18n/server";
 import { translate, type Locale, type MessageKey } from "@/lib/i18n/messages";
@@ -14,7 +15,7 @@ export const metadata: Metadata = {
 };
 
 function Brand({ homeLabel }: { homeLabel: string }) {
-  return <BrandLockup className="orbit-brand" label={homeLabel} inverse />;
+  return <BrandLockup className="orbit-brand" label={homeLabel} />;
 }
 
 function OrbitArtwork({ t }: { t: (key: MessageKey) => string }) {
@@ -22,8 +23,6 @@ function OrbitArtwork({ t }: { t: (key: MessageKey) => string }) {
     <div className="orbit-art" role="img" aria-label={t("landing.globeAria")}>
       <PointGlobeCanvas />
       <Image className="orbit-art__mascot" src="/brand/laverta-mascot.webp" alt="" width={640} height={606} />
-      <span className="orbit-art__coordinate orbit-art__coordinate--left">{t("landing.globeAnchor")}</span>
-      <span className="orbit-art__coordinate orbit-art__coordinate--right">{t("landing.globeSource")}</span>
       <span className="orbit-art__fiction">{t("landing.globeCaption")}</span>
     </div>
   );
@@ -71,6 +70,7 @@ export default async function LandingPage() {
   return (
     <LandingMotion>
       <main className="landing-page orbit-landing" id="top">
+        <MethodIntro />
         <header className="orbit-header">
           <div className="orbit-header__inner">
             <Brand homeLabel={t("nav.home")} />
@@ -89,8 +89,10 @@ export default async function LandingPage() {
         <section className="orbit-hero" aria-labelledby="orbit-title">
           <OrbitArtwork t={t} />
           <Reveal className="orbit-hero__content">
-            <div className="orbit-hero__badge"><i /> {t("landing.kicker")}</div>
-            <div className="orbit-hero__emblem" aria-hidden="true"><Image src="/brand/laverta-symbol-on-dark.png" alt="" width={334} height={264} /></div>
+            <div className="orbit-hero__emblem" aria-hidden="true">
+              <Image className="orbit-hero__emblem-light" src="/brand/laverta-symbol.png" alt="" width={334} height={264} />
+              <Image className="orbit-hero__emblem-dark" src="/brand/laverta-symbol-on-dark.png" alt="" width={334} height={264} />
+            </div>
             <h1 id="orbit-title">{t("brand.name")}<span>.</span></h1>
             <p className="orbit-hero__tagline">{t("landing.titleA")} <em>{t("landing.titleB")}</em></p>
             <p className="orbit-hero__description">{t("landing.description")}</p>

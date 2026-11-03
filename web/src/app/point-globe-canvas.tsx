@@ -29,6 +29,60 @@ const LIGHTS = [
   { latitude: 55.7558, longitude: 37.6173 },
 ];
 
+type GlobePalette = {
+  ocean: string;
+  land: string;
+  border: string;
+  rim: string;
+  rimGlow: string;
+  orbit: string;
+  satelliteStroke: string;
+  satellitePanel: string;
+  satellites: [string, string];
+  fallback: [string, string, string];
+  lightTone: string;
+  shadeBase: number;
+  shadeRange: number;
+};
+
+// Le mode sombre garde les couleurs d’origine ; le thème clair dessine un globe pâle aux traits bleus.
+const PALETTES: Record<"light" | "dark", GlobePalette> = {
+  dark: {
+    ocean: "#06131f",
+    land: "#12313d",
+    border: "rgba(72, 190, 207, 0.42)",
+    rim: "rgba(80, 221, 242, 0.54)",
+    rimGlow: "rgba(42, 209, 246, 0.8)",
+    orbit: "rgba(93, 213, 232, 0.28)",
+    satelliteStroke: "#d8fbff",
+    satellitePanel: "#69dff0",
+    satellites: ["#73e8f6", "#8da9ff"],
+    fallback: ["#0e3546", "#061722", "#02070c"],
+    lightTone: "95% 68%",
+    shadeBase: 0.46,
+    shadeRange: 0.48,
+  },
+  light: {
+    ocean: "#e2ebf7",
+    land: "#c3d4ec",
+    border: "rgba(26, 86, 255, 0.34)",
+    rim: "rgba(26, 86, 255, 0.42)",
+    rimGlow: "rgba(26, 86, 255, 0.22)",
+    orbit: "rgba(26, 86, 255, 0.26)",
+    satelliteStroke: "#1547d6",
+    satellitePanel: "#1a56ff",
+    satellites: ["#1a56ff", "#0e8fb0"],
+    fallback: ["#edf3fb", "#dde8f6", "#cfdcef"],
+    lightTone: "85% 46%",
+    shadeBase: 0.8,
+    shadeRange: 0.2,
+  },
+};
+
+function currentPalette() {
+  return PALETTES[document.documentElement.dataset.theme === "dark" ? "dark" : "light"];
+}
+
 type GlobeProjection = {
   width: number;
   height: number;
@@ -44,17 +98,17 @@ type GlobeProjection = {
   image: ImageData;
 };
 
-function createMapTexture(pack: CountryPack) {
+function createMapTexture(pack: CountryPack, palette: GlobePalette) {
   const texture = document.createElement("canvas");
   texture.width = TEXTURE_WIDTH;
   texture.height = TEXTURE_HEIGHT;
   const textureContext = texture.getContext("2d", { alpha: false });
   if (!textureContext) return null;
 
-  textureContext.fillStyle = "#06131f";
+  textureContext.fillStyle = palette.ocean;
   textureContext.fillRect(0, 0, TEXTURE_WIDTH, TEXTURE_HEIGHT);
-  textureContext.fillStyle = "#12313d";
-  textureContext.strokeStyle = "rgba(72, 190, 207, 0.42)";
+  textureContext.fillStyle = palette.land;
+  textureContext.strokeStyle = palette.border;
   textureContext.lineWidth = 0.7;
   textureContext.lineJoin = "round";
 
@@ -137,7 +191,7 @@ function createProjection(width: number, height: number, frameContext: CanvasRen
   };
 }
 
-function drawSatellite(context: CanvasRenderingContext2D, x: number, y: number, angle: number, scale: number, color: string) {
+function drawSatellite(context: CanvasRenderingContext2D, x: number, y: number, angle: number, scale: number, color: string, palette: GlobePalette) {
   context.save();
   context.translate(x, y);
   context.rotate(angle);
@@ -145,11 +199,11 @@ function drawSatellite(context: CanvasRenderingContext2D, x: number, y: number, 
   context.shadowColor = color;
   context.shadowBlur = 9;
   context.fillStyle = color;
-  context.strokeStyle = "#d8fbff";
+  context.strokeStyle = palette.satelliteStroke;
   context.lineWidth = 0.8;
   context.fillRect(-3, -2.2, 6, 4.4);
   context.strokeRect(-3, -2.2, 6, 4.4);
-  context.fillStyle = "#69dff0";
+  context.fillStyle = palette.satellitePanel;
   context.fillRect(-9, -1.7, 5, 3.4);
   context.fillRect(4, -1.7, 5, 3.4);
   context.beginPath();
@@ -179,8 +233,10 @@ export function PointGlobeCanvas() {
     let active = false;
     let inView = false;
     let disposed = false;
+    let mapPack: CountryPack | null = null;
     let mapPixels: Uint8ClampedArray | null = null;
     let projection: GlobeProjection | null = null;
+    let palette = currentPalette();
     const frameCanvas = document.createElement("canvas");
     let frameContext = frameCanvas.getContext("2d");
 
@@ -192,9 +248,9 @@ export function PointGlobeCanvas() {
       const radiusX = Math.min(frameCanvas.width * 0.72, frameCanvas.height * 1.5);
       const radiusY = frameCanvas.height * 0.62;
       const glow = frameContext.createRadialGradient(centerX, centerY, 0, centerX, centerY, radiusX);
-      glow.addColorStop(0, "#0e3546");
-      glow.addColorStop(0.78, "#061722");
-      glow.addColorStop(1, "#02070c");
+      glow.addColorStop(0, palette.fallback[0]);
+      glow.addColorStop(0.78, palette.fallback[1]);
+      glow.addColorStop(1, palette.fallback[2]);
       frameContext.fillStyle = glow;
       frameContext.beginPath();
       frameContext.ellipse(centerX, centerY, radiusX, radiusY, 0, 0, TWO_PI);
@@ -217,7 +273,7 @@ export function PointGlobeCanvas() {
         if (sourceColumn >= TEXTURE_WIDTH) sourceColumn -= TEXTURE_WIDTH;
         const source = (projection.sourceRows[point] * TEXTURE_WIDTH + sourceColumn) * 4;
         const target = projection.targetIndices[point] * 4;
-        const shade = 0.46 + projection.depth[point] * 0.48;
+        const shade = palette.shadeBase + projection.depth[point] * palette.shadeRange;
         output[target] = mapPixels[source] * shade;
         output[target + 1] = mapPixels[source + 1] * shade;
         output[target + 2] = mapPixels[source + 2] * shade;
@@ -229,9 +285,9 @@ export function PointGlobeCanvas() {
 
       const { centerX, centerY, radiusX, radiusY } = projection;
       frameContext.save();
-      frameContext.strokeStyle = "rgba(80, 221, 242, 0.54)";
+      frameContext.strokeStyle = palette.rim;
       frameContext.lineWidth = 1.1;
-      frameContext.shadowColor = "rgba(42, 209, 246, 0.8)";
+      frameContext.shadowColor = palette.rimGlow;
       frameContext.shadowBlur = 24;
       frameContext.beginPath();
       frameContext.ellipse(centerX, centerY, radiusX, radiusY, 0, 0, TWO_PI);
@@ -239,15 +295,15 @@ export function PointGlobeCanvas() {
       frameContext.shadowBlur = 0;
 
       const orbits = [
-        { rx: radiusX * 1.02, ry: radiusY * 0.52, tilt: -0.11, phase: animationTime * TWO_PI / 27_000, color: "#73e8f6" },
-        { rx: radiusX * 0.52, ry: radiusY * 1.06, tilt: 0.42, phase: -animationTime * TWO_PI / 21_000 + 1.1, color: "#8da9ff" },
+        { rx: radiusX * 1.02, ry: radiusY * 0.52, tilt: -0.11, phase: animationTime * TWO_PI / 27_000, color: palette.satellites[0] },
+        { rx: radiusX * 0.52, ry: radiusY * 1.06, tilt: 0.42, phase: -animationTime * TWO_PI / 21_000 + 1.1, color: palette.satellites[1] },
       ];
       const satelliteScale = Math.max(0.72, Math.min(1.12, projection.width / 850));
       for (const orbit of orbits) {
         frameContext.save();
         frameContext.setLineDash([3, 7]);
         frameContext.lineWidth = 0.9;
-        frameContext.strokeStyle = "rgba(93, 213, 232, 0.28)";
+        frameContext.strokeStyle = palette.orbit;
         frameContext.beginPath();
         frameContext.ellipse(centerX, centerY, orbit.rx, orbit.ry, orbit.tilt, 0, TWO_PI);
         frameContext.stroke();
@@ -261,7 +317,7 @@ export function PointGlobeCanvas() {
         const y = centerY + localX * sine + localY * cosine;
         const tangentX = -orbit.rx * Math.sin(orbit.phase) * cosine - orbit.ry * Math.cos(orbit.phase) * sine;
         const tangentY = -orbit.rx * Math.sin(orbit.phase) * sine + orbit.ry * Math.cos(orbit.phase) * cosine;
-        drawSatellite(frameContext, x, y, Math.atan2(tangentY, tangentX), satelliteScale, orbit.color);
+        drawSatellite(frameContext, x, y, Math.atan2(tangentY, tangentX), satelliteScale, orbit.color, palette);
       }
 
       const latitudeRadians = Math.PI / 180;
@@ -273,7 +329,7 @@ export function PointGlobeCanvas() {
         const x = centerX + Math.cos(latitude) * Math.sin(longitudeDelta) * radiusX;
         const y = centerY - Math.sin(latitude) * radiusY;
         const hue = (animationTime / 55 + index * 37) % 360;
-        const color = `hsl(${hue} 95% 68%)`;
+        const color = `hsl(${hue} ${palette.lightTone})`;
         const pulse = 1.5 + (Math.sin(animationTime / 430 + index * 1.7) + 1) * 0.85;
         frameContext.save();
         frameContext.fillStyle = color;
@@ -367,6 +423,15 @@ export function PointGlobeCanvas() {
         paint(0);
       } else start();
     };
+    // Le globe suit le bouton de thème : nouvelle palette, texture redessinée.
+    const themeObserver = new MutationObserver(() => {
+      const next = currentPalette();
+      if (next === palette) return;
+      palette = next;
+      if (mapPack) mapPixels = createMapTexture(mapPack, palette);
+      paint(elapsed);
+    });
+    themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
     observer.observe(canvas);
     resizeObserver.observe(canvas);
     document.addEventListener("visibilitychange", onVisibilityChange);
@@ -380,7 +445,8 @@ export function PointGlobeCanvas() {
       })
       .then((pack) => {
         if (disposed) return;
-        mapPixels = createMapTexture(pack);
+        mapPack = pack;
+        mapPixels = createMapTexture(pack, palette);
         resize();
         start();
       })
@@ -396,6 +462,7 @@ export function PointGlobeCanvas() {
       stop();
       observer.disconnect();
       resizeObserver.disconnect();
+      themeObserver.disconnect();
       document.removeEventListener("visibilitychange", onVisibilityChange);
       motion.removeEventListener("change", onMotionChange);
     };
