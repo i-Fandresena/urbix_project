@@ -1,0 +1,110 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: laverta
+      POSTGRES_USER: laverta
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in /home/laverta/.env}
+    volumes:
+      - /home/laverta/data/postgres:/var/lib/postgresql/data
+    networks:
+      - internal
+    mem_limit: 1g
+    mem_reservation: 256m
+    cpus: 0.5
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U laverta -d laverta"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 20s
+    logging:
+      options:
+        max-size: 10m
+        max-file: "3"
+
+  migrator:
+    image: laverta:${IMAGE_TAG:?IMAGE_TAG must be the commit SHA}
+    profiles: ["ops"]
+    restart: "no"
+    init: true
+    command: ["npm", "run", "db:migrate:runtime"]
+    environment: &laverta-environment
+      NODE_ENV: production
+      DATABASE_URL: postgresql://laverta:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in /home/laverta/.env}@postgres:5432/laverta
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?Set BETTER_AUTH_SECRET in /home/laverta/.env}
+      BETTER_AUTH_URL: ${BETTER_AUTH_URL:-https://laverta.aura-plus.site}
+      BETTER_AUTH_TRUSTED_ORIGINS: ${BETTER_AUTH_TRUSTED_ORIGINS:-https://laverta.aura-plus.site}
+      LAVERTA_MEDIA_ENCRYPTION_KEY: ${LAVERTA_MEDIA_ENCRYPTION_KEY:?Set LAVERTA_MEDIA_ENCRYPTION_KEY in /home/laverta/.env}
+      LAVERTA_EDITOR_EMAILS: ${LAVERTA_EDITOR_EMAILS:-}
+      LAVERTA_GEMINI_API_KEY: ${LAVERTA_GEMINI_API_KEY:-}
+      AUTH_SMTP_URL: ${AUTH_SMTP_URL:-}
+      AUTH_EMAIL_FROM: ${AUTH_EMAIL_FROM:-}
+      MESSENGER_PAGE_ACCESS_TOKEN: ${MESSENGER_PAGE_ACCESS_TOKEN:-}
+      MESSENGER_APP_SECRET: ${MESSENGER_APP_SECRET:-}
+      MESSENGER_VERIFY_TOKEN: ${MESSENGER_VERIFY_TOKEN:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - internal
+    mem_limit: 768m
+    cpus: 0.5
+
+  app:
+    image: laverta:${IMAGE_TAG:?IMAGE_TAG must be the commit SHA}
+    restart: unless-stopped
+    init: true
+    stop_grace_period: 20s
+    environment:
+      <<: *laverta-environment
+      HOSTNAME: 0.0.0.0
+      PORT: 3000
+      NEXT_TELEMETRY_DISABLED: "1"
+      NODE_OPTIONS: --max-old-space-size=512
+    expose:
+      - "3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - internal
+      - coolify
+    mem_limit: 768m
+    mem_reservation: 256m
+    cpus: 0.75
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:3000/api/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
+      interval: 20s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
+    labels:
+      traefik.enable: "true"
+      traefik.docker.network: coolify
+      traefik.http.routers.laverta-http.rule: "Host(`laverta.aura-plus.site`)"
+      traefik.http.routers.laverta-http.entrypoints: http
+      traefik.http.routers.laverta-http.middlewares: laverta-https-redirect
+      traefik.http.middlewares.laverta-https-redirect.redirectscheme.scheme: https
+      traefik.http.routers.laverta-https.rule: "Host(`laverta.aura-plus.site`)"
+      traefik.http.routers.laverta-https.entrypoints: https
+      traefik.http.routers.laverta-https.tls: "true"
+      traefik.http.routers.laverta-https.tls.certresolver: letsencrypt
+      traefik.http.routers.laverta-https.service: laverta-app
+      traefik.http.services.laverta-app.loadbalancer.server.port: "3000"
+    logging:
+      options:
+        max-size: 10m
+        max-file: "3"
+
+networks:
+  internal:
+    internal: true
+  coolify:
+    external: true
+    name: coolify

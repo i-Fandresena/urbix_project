@@ -1,0 +1,69 @@
+name: Laverta CI/CD
+
+on:
+  push:
+    branches: [prototype]
+    paths:
+      - "web/**"
+      - "deploy/**"
+      - ".github/workflows/laverta-cicd.yml"
+  pull_request:
+    branches: [prototype]
+    paths:
+      - "web/**"
+      - "deploy/**"
+      - ".github/workflows/laverta-cicd.yml"
+  workflow_dispatch:
+    inputs:
+      deploy:
+        description: Deploy the selected prototype commit after the build
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: laverta-prototype-production
+  cancel-in-progress: false
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out the selected commit
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Validate the production Compose configuration
+        env:
+          IMAGE_TAG: ci-config-check
+          POSTGRES_PASSWORD: compose-validation-only
+          BETTER_AUTH_SECRET: compose-validation-only
+          LAVERTA_MEDIA_ENCRYPTION_KEY: AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=
+        run: docker compose --project-name laverta --env-file deploy/production.env.example --file deploy/compose.production.yaml config --quiet
+
+      - name: Build the production image and run lint
+        run: docker build --pull --tag "laverta:${GITHUB_SHA}" ./web
+
+      - name: Preflight, transfer the image and deploy over restricted SSH
+        if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/prototype' && inputs.deploy)
+        env:
+          LAVERTA_DEPLOY_SSH_KEY: ${{ secrets.LAVERTA_DEPLOY_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          test -n "$LAVERTA_DEPLOY_SSH_KEY"
+          install -m 700 -d "$HOME/.ssh"
+          printf '%s\n' "$LAVERTA_DEPLOY_SSH_KEY" > "$HOME/.ssh/laverta_deploy"
+          chmod 600 "$HOME/.ssh/laverta_deploy"
+          ssh_options=(
+            -T
+            -i "$HOME/.ssh/laverta_deploy"
+            -o IdentitiesOnly=yes
+            -o BatchMode=yes
+            -o StrictHostKeyChecking=yes
+            -o UserKnownHostsFile="$GITHUB_WORKSPACE/deploy/qualitec-vps.known_hosts"
+            -o ConnectTimeout=15
+          )
+          ssh "${ssh_options[@]}" laverta-ci@72.60.76.85 inventory
+          docker save "laverta:${GITHUB_SHA}" | gzip -1 | ssh "${ssh_options[@]}" laverta-ci@72.60.76.85 "deploy:${GITHUB_SHA}"
