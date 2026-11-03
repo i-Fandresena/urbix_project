@@ -1,7 +1,9 @@
 import { betterAuth } from "better-auth";
+import { APIError } from "better-auth/api";
 import nodemailer from "nodemailer";
 import { isEmailDeliveryConfigured, trustedOrigins } from "@/lib/auth-config";
 import { pool } from "@/lib/db";
+import { isInvitedEmail } from "@/lib/invitations";
 
 const smtpUrl = process.env.AUTH_SMTP_URL;
 const emailFrom = process.env.AUTH_EMAIL_FROM;
@@ -40,7 +42,21 @@ export const auth = betterAuth({
   },
   user: {
     additionalFields: {
+      // Conservé pour compatibilité avec les comptes existants ; le formulaire ne le demande plus.
       organization: { type: "string", required: false, input: true },
+    },
+  },
+  databaseHooks: {
+    user: {
+      create: {
+        // Inscription sur invitation uniquement, appliquée côté serveur pour toute création d’utilisateur.
+        // Statut 400 (et non 403) : Better Auth transforme un 403 en fausse réussite lorsque la vérification e-mail est active.
+        before: async (user) => {
+          if (!(await isInvitedEmail(user.email))) {
+            throw APIError.from("BAD_REQUEST", { code: "INVITATION_REQUIRED", message: "Sign-up is by invitation only." });
+          }
+        },
+      },
     },
   },
   ...(emailDeliveryConfigured ? {

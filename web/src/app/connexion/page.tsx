@@ -33,9 +33,11 @@ function AuthArtwork({ t }: { t: (key: MessageKey) => string }) {
   );
 }
 
-export default async function ConnexionPage(props: { searchParams: Promise<{ configuration?: string }> }) {
+export default async function ConnexionPage(props: { searchParams: Promise<{ configuration?: string; invitation?: string; email?: string }> }) {
   const locale = await getServerLocale();
-  const { configuration } = await props.searchParams;
+  const { configuration, invitation, email } = await props.searchParams;
+  // Lien d’invitation : onglet inscription ouvert et adresse préremplie (simple confort, l’invitation est vérifiée côté serveur).
+  const invitedEmail = typeof email === "string" && email.length <= 254 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()) ? email.trim().toLowerCase() : null;
   const t = (key: MessageKey) => translate(locale, key);
   const configured = isAuthConfigured();
   let authenticated = false;
@@ -74,7 +76,7 @@ export default async function ConnexionPage(props: { searchParams: Promise<{ con
             <div className="auth-heading"><span className="auth-heading__eyebrow">{t("auth.panelKicker")}</span><h2 id="auth-title">{t("auth.panelTitle")}</h2><p>{t("auth.panelText")}</p></div>
             <Suspense fallback={null}><QueryNotice /></Suspense>
             {authUnavailable && <p className="auth-message auth-message--error" role="alert">{t("auth.databaseUnavailable")}</p>}
-            <LoginForm configured={configured} emailConfigured={configured && isEmailDeliveryConfigured()} serviceUnavailable={authUnavailable} />
+            <LoginForm configured={configured} emailConfigured={configured && isEmailDeliveryConfigured()} serviceUnavailable={authUnavailable} invitation={invitation === "1"} invitedEmail={invitedEmail} />
             <div className="auth-panel__back"><Link href="/"><ArrowUpRight size={13} /> {t("auth.discover")}</Link></div>
           </div>
         </section>

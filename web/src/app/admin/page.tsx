@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
-import { saveStaffAction } from "@/app/admin/actions";
+import { deleteCredentialAction, saveStaffAction } from "@/app/admin/actions";
 import { Notice, StaffShell } from "@/app/staff-shell";
 import { getServerLocale } from "@/lib/i18n/server";
 import { staffTranslator } from "@/lib/i18n/staff";
 import { REPORT_THEMES } from "@/lib/reports";
 import { listStaff, requireRole, STAFF_ROLES } from "@/lib/staff";
+import { listCredentialSummaries } from "@/lib/staff-credentials";
 
 export const metadata: Metadata = { title: "Équipe — Laverta" };
 
@@ -13,7 +14,7 @@ export default async function AdminPage(props: { searchParams: Promise<{ saved?:
   const t = staffTranslator(locale);
   const { member } = await requireRole(["admin"], "/admin");
   const query = await props.searchParams;
-  const staff = await listStaff();
+  const [staff, credentials] = await Promise.all([listStaff(), listCredentialSummaries()]);
   const editing = staff.find((row) => row.email === query.edit);
 
   return (
@@ -25,18 +26,34 @@ export default async function AdminPage(props: { searchParams: Promise<{ saved?:
           <h2>{t("admin.members", { count: staff.length })}</h2>
           {staff.length === 0 ? <p className="staff-muted">{t("admin.none")}</p> : (
             <div className="staff-scroll"><table className="staff-table">
-              <thead><tr><th>{t("admin.email")}</th><th>{t("admin.role")}</th><th>{t("admin.scope")}</th><th /></tr></thead>
+              <thead><tr><th>{t("admin.email")}</th><th>{t("admin.role")}</th><th>{t("admin.scope")}</th><th>{t("admin.credential")}</th><th /></tr></thead>
               <tbody>{staff.map((row) => (
                 <tr key={row.email}>
                   <td>{row.email}{row.display_name && <div className="staff-muted">{row.display_name}</div>}</td>
                   <td><span className="staff-role">{t(`role.${row.role}`)}</span>{!row.active && <div className="staff-muted">{t("admin.inactive")}</div>}</td>
                   <td className="staff-muted">{row.role === "organization" ? row.organization : row.role === "journalist" ? (row.rubrics.length ? row.rubrics.map((theme) => t(`theme.${theme}` as "theme.other")).join(", ") : t("admin.allThemes")) : "—"}</td>
+                  <td>{(() => {
+                    const credential = credentials.get(row.email);
+                    if (!credential) return <span className="staff-muted">{t("admin.credentialNone")}</span>;
+                    return (
+                      <div>
+                        {credential.matricule && <div>{t("admin.matricule")} : <strong>{credential.matricule}</strong></div>}
+                        {credential.card_mime_type && <div><a href={`/api/admin/justificatif?email=${encodeURIComponent(row.email)}`} target="_blank" rel="noopener noreferrer">{t("admin.credentialView")}</a> <span className="staff-muted">({credential.card_mime_type === "application/pdf" ? "PDF" : t("admin.credentialImage")})</span></div>}
+                        <div className="staff-muted">{t("admin.credentialConsent", { date: credential.consent_at.toISOString().slice(0, 10) })}</div>
+                        <form action={deleteCredentialAction}>
+                          <input type="hidden" name="email" value={row.email} />
+                          <button className="staff-btn staff-btn--quiet" type="submit" aria-label={t("admin.credentialDeleteAria", { email: row.email })}>{t("admin.credentialDelete")}</button>
+                        </form>
+                      </div>
+                    );
+                  })()}</td>
                   <td><a href={`/admin?edit=${encodeURIComponent(row.email)}`}>{t("admin.edit")}</a></td>
                 </tr>
               ))}</tbody>
             </table></div>
           )}
           <p className="staff-muted" style={{ marginTop: 12 }}>{t("admin.envNote")}</p>
+          <p className="staff-muted">{t("admin.credentialNote")}</p>
         </section>
 
         <section className="staff-card">

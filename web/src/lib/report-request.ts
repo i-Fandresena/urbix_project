@@ -22,6 +22,10 @@ export function consumeReportSubmission(request: Request) {
   return consumeFromWindow(request, "reports", WINDOW_MS, MAX_REPORTS_PER_WINDOW);
 }
 
+export function consumeCredentialUpload(request: Request) {
+  return consumeFromWindow(request, "credentials", WINDOW_MS, 6);
+}
+
 export function consumeTrackingRequest(request: Request) {
   return consumeFromWindow(request, "tracking", TRACKING_WINDOW_MS, MAX_TRACKING_REQUESTS_PER_WINDOW);
 }

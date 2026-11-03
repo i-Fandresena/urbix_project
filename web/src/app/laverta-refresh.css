@@ -260,6 +260,15 @@ html:not([data-motion-ready]) .motion-reveal { opacity: 1 !important; transform:
 .auth-message, .auth-config-note { border-radius: 10px; font-size: 10px; }
 .auth-terms { color: #64748b; font-size: 9px; line-height: 1.7; }
 .auth-terms a { color: var(--signal-strong); }
+.auth-credentials { display: grid; gap: 12px; margin: 4px 0 0; padding: 14px; border: 1px solid #d8e0ec; border-radius: 10px; }
+.auth-credentials legend { padding: 0 6px; color: #53627a; font-size: 9px; font-weight: 700; letter-spacing: .1em; }
+.auth-credentials__help, .auth-field__hint { margin: 0; color: #64748b; font-size: 9px; line-height: 1.6; }
+.auth-field input[type="file"] { padding-block: 13px; font-size: 11px; }
+.auth-consent { display: flex; align-items: flex-start; gap: 9px; color: #3f4d63; font-size: 10px; line-height: 1.6; }
+.auth-consent input { flex: 0 0 auto; width: 16px; height: 16px; margin-top: 2px; accent-color: var(--signal-strong); }
+:root[data-theme="dark"] .auth-credentials { border-color: #2c3a4f; }
+:root[data-theme="dark"] .auth-credentials legend, :root[data-theme="dark"] .auth-consent { color: var(--ink); }
+:root[data-theme="dark"] .auth-credentials__help, :root[data-theme="dark"] .auth-field__hint { color: #aebed0; }
 
 /* Public intake, tracking and newsroom queue */
 .public-flow { background: var(--paper); }
