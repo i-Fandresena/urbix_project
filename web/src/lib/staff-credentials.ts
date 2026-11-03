@@ -10,6 +10,9 @@ import { requireReportsPool } from "@/lib/reports";
 export const MAX_CARD_BYTES = 5 * 1024 * 1024;
 export const MAX_MATRICULE_LENGTH = 60;
 export const CREDENTIAL_WINDOW_MINUTES = 15;
+// Conservation : un justificatif est supprimé automatiquement 5 jours après son dépôt (created_at = consent_at).
+export const CREDENTIAL_RETENTION_DAYS = 5;
+const RETENTION_ACTOR = "system:retention";
 const IMAGE_MIME_TYPES: Record<string, string> = { jpeg: "image/jpeg", png: "image/png", webp: "image/webp" };
 const ACCEPTED_DECLARED_TYPES = new Set(["", "image/jpeg", "image/jpg", "image/png", "image/webp", "application/pdf"]);
 
@@ -43,6 +46,38 @@ export async function prepareCard(file: File): Promise<PreparedCard> {
   const declared = file.type === "image/jpg" ? "image/jpeg" : file.type;
   if (declared && declared !== mimeType) throw new Error("CARD_MISMATCH");
   return { ...encryptReportMedia(bytes), mimeType, size: bytes.byteLength, sha256: createHash("sha256").update(bytes).digest("hex") };
+}
+
+// Une seule instruction : suppression des lignes expirées et audit `credential_expired` sans matricule ni fichier.
+const PURGE_EXPIRED_SQL = `
+  WITH expired AS (
+    DELETE FROM laverta_staff_credentials
+    WHERE created_at <= now() - make_interval(days => $1)
+    RETURNING email, matricule, card_mime_type, card_size
+  )
+  INSERT INTO laverta_staff_audit (actor_email, target_email, action, before_state, after_state)
+  SELECT $2, email, 'credential_expired',
+    jsonb_build_object(
+      'matricule', matricule IS NOT NULL,
+      'card', CASE WHEN card_mime_type IS NULL THEN NULL ELSE jsonb_build_object('mime', card_mime_type, 'size', card_size) END
+    ),
+    NULL
+  FROM expired`;
+
+export async function purgeExpiredCredentials() {
+  const result = await requireReportsPool().query(PURGE_EXPIRED_SQL, [CREDENTIAL_RETENTION_DAYS, RETENTION_ACTOR]);
+  return result.rowCount ?? 0;
+}
+
+declare global {
+  var lavertaCredentialExpiryTimer: ReturnType<typeof setInterval> | undefined;
+}
+
+if (process.env.DATABASE_URL && !globalThis.lavertaCredentialExpiryTimer) {
+  globalThis.lavertaCredentialExpiryTimer = setInterval(() => {
+    void purgeExpiredCredentials().catch(() => undefined);
+  }, 6 * 60 * 60 * 1000);
+  globalThis.lavertaCredentialExpiryTimer.unref();
 }
 
 type StoreInput = { email: string; userId: string; matricule: string | null; card: PreparedCard | null };
@@ -87,16 +122,19 @@ export async function storeCredential(input: StoreInput) {
   }
 }
 
-export type CredentialSummary = { email: string; matricule: string | null; card_mime_type: string | null; card_size: number | null; consent_at: Date; created_at: Date };
+export type CredentialSummary = { email: string; matricule: string | null; card_mime_type: string | null; card_size: number | null; consent_at: Date; created_at: Date; expires_at: Date };
 
 export async function listCredentialSummaries() {
+  await purgeExpiredCredentials();
   const result = await requireReportsPool().query<CredentialSummary>(
-    "SELECT email, matricule, card_mime_type, card_size, consent_at, created_at FROM laverta_staff_credentials",
+    "SELECT email, matricule, card_mime_type, card_size, consent_at, created_at, created_at + make_interval(days => $1) AS expires_at FROM laverta_staff_credentials",
+    [CREDENTIAL_RETENTION_DAYS],
   );
   return new Map(result.rows.map((row) => [row.email, row]));
 }
 
 export async function readCredentialCard(email: string, actorEmail: string) {
+  await purgeExpiredCredentials();
   const db = requireReportsPool();
   const result = await db.query<{ card_ciphertext: Buffer; card_nonce: Buffer; card_tag: Buffer; card_mime_type: string; card_sha256: string }>(
     "SELECT card_ciphertext, card_nonce, card_tag, card_mime_type, card_sha256 FROM laverta_staff_credentials WHERE email = $1 AND card_ciphertext IS NOT NULL",

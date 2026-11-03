@@ -40,6 +40,7 @@ export default async function AdminPage(props: { searchParams: Promise<{ saved?:
                         {credential.matricule && <div>{t("admin.matricule")} : <strong>{credential.matricule}</strong></div>}
                         {credential.card_mime_type && <div><a href={`/api/admin/justificatif?email=${encodeURIComponent(row.email)}`} target="_blank" rel="noopener noreferrer">{t("admin.credentialView")}</a> <span className="staff-muted">({credential.card_mime_type === "application/pdf" ? "PDF" : t("admin.credentialImage")})</span></div>}
                         <div className="staff-muted">{t("admin.credentialConsent", { date: credential.consent_at.toISOString().slice(0, 10) })}</div>
+                        <div className="staff-muted">{t("admin.credentialExpires", { date: credential.expires_at.toISOString().slice(0, 10) })}</div>
                         <form action={deleteCredentialAction}>
                           <input type="hidden" name="email" value={row.email} />
                           <button className="staff-btn staff-btn--quiet" type="submit" aria-label={t("admin.credentialDeleteAria", { email: row.email })}>{t("admin.credentialDelete")}</button>
