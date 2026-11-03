@@ -1,131 +1,147 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
-import { ArrowDown, ArrowRight, ArrowUpRight, Check, Download, Eye, Smartphone } from "lucide-react";
+import { Activity, ArrowDown, ArrowRight, ArrowUpRight, BadgeCheck, Check, Eye, FileCheck2, LockKeyhole, Search, Share2, ShieldCheck } from "lucide-react";
+import { BrandLockup } from "./brand-lockup";
+import { LandingMotion, Reveal, RevealArticle } from "./landing-motion";
+import { PointGlobeCanvas } from "./point-globe-canvas";
+import { getServerLocale } from "@/lib/i18n/server";
+import { translate, type Locale, type MessageKey } from "@/lib/i18n/messages";
 
 export const metadata: Metadata = {
-  title: "Hamarino — Chaque image mérite ses sources",
-  description: "L’espace de recoupement visuel pensé pour les rédactions à Madagascar.",
+  title: "Laverta ? La correction doit suivre la rumeur",
+  description: "Laverta relie les signalements, le travail de v?rification journalistique et la circulation des corrections ? Madagascar.",
 };
 
-function Brand() {
-  return (
-    <Link className="brand-lockup" href="/" aria-label="Hamarino, accueil">
-      <span className="brand-lockup__mark" aria-hidden="true">
-        <svg viewBox="0 0 36 36" fill="none">
-          <path d="M4 12V4h8M24 4h8v8M32 24v8h-8M12 32H4v-8" />
-          <circle cx="14.5" cy="18" r="2.4" />
-          <path d="M17 18h7.2" />
-          <circle cx="27.2" cy="18" r="1.8" />
-        </svg>
-      </span>
-      <span className="brand-lockup__word">hamarino<span>.</span></span>
-    </Link>
-  );
+function Brand({ homeLabel }: { homeLabel: string }) {
+  return <BrandLockup className="orbit-brand" label={homeLabel} inverse />;
 }
 
-function EvidenceArtwork({ compact = false }: { compact?: boolean }) {
+function OrbitArtwork({ t }: { t: (key: MessageKey) => string }) {
   return (
-    <div className={`evidence-art${compact ? " evidence-art--compact" : ""}`} role="img" aria-label="Illustration abstraite d’une image et de ses sources">
-      <div className="evidence-art__meta"><span>ATELIER DE VÉRIFICATION</span><span>H·01</span></div>
-      <div className="evidence-art__photo">
-        <svg viewBox="0 0 620 410" aria-hidden="true">
-          <rect width="620" height="410" fill="#E7E5D9" />
-          <circle cx="468" cy="102" r="47" fill="#D6EE75" />
-          <path d="M0 280 150 155l103 97 113-130 254 207v81H0z" fill="#81937C" />
-          <path d="m0 325 180-108 116 91 135-117 189 137v82H0z" fill="#385D4B" />
-          <path d="m0 310 88-63 74 28 84-48 94 54 99-73 99 56 82-38v184H0z" fill="#254438" />
-          <path d="M70 319h91v91H70zM184 287h78v123h-78zM285 328h108v82H285zM415 293h78v117h-78zM510 328h64v82h-64z" fill="#F6F5EF" />
-          <path d="M87 342h17v25H87zm35 0h17v25h-17zm77-29h16v24h-16zm34 0h16v24h-16zm84 39h19v28h-19zm41 0h19v28h-19zm75-39h16v24h-16zm33 0h16v24h-16zm55 34h13v20h-13zm27 0h13v20h-13z" fill="#C76A4C" />
-          <path d="M0 376c81-19 115 2 180-8s111-25 183-8 151 11 257-8v58H0z" fill="#172421" opacity=".16" />
-        </svg>
-        <span className="evidence-art__image-label"><Eye size={13} /> IMAGE · EXEMPLE VISUEL</span>
-      </div>
-      <div className="evidence-art__frame evidence-art__frame--one" aria-hidden="true"><span /> <span /> <span /> <span /></div>
-      <div className="evidence-note evidence-note--source">
-        <div className="evidence-note__index">01 / SOURCE</div>
-        <strong>Une piste à consulter</strong>
-        <span><i /> Publication locale · 2024</span>
-      </div>
-      <div className="evidence-note evidence-note--status">
-        <div className="evidence-note__index">CONCLUSION ÉDITORIALE</div>
-        <strong><span className="evidence-note__dot" /> À vérifier</strong>
-        <span>La décision reste humaine.</span>
-      </div>
-      <div className="evidence-art__caption">VISUEL D’ILLUSTRATION · DONNÉES FICTIVES</div>
+    <div className="orbit-art" role="img" aria-label={t("landing.globeAria")}>
+      <PointGlobeCanvas />
+      <Image className="orbit-art__mascot" src="/brand/laverta-mascot.webp" alt="" width={640} height={606} />
+      <span className="orbit-art__coordinate orbit-art__coordinate--left">{t("landing.globeAnchor")}</span>
+      <span className="orbit-art__coordinate orbit-art__coordinate--right">{t("landing.globeSource")}</span>
+      <span className="orbit-art__fiction">{t("landing.globeCaption")}</span>
     </div>
   );
 }
 
-export default function LandingPage() {
+function featureCards(t: (key: MessageKey) => string) {
+  return [
+    { icon: <FileCheck2 size={19} aria-hidden="true" />, title: t("landing.feature1Title"), description: t("landing.feature1Text") },
+    { icon: <Eye size={19} aria-hidden="true" />, title: t("landing.feature2Title"), description: t("landing.feature2Text") },
+    { icon: <Search size={19} aria-hidden="true" />, title: t("landing.feature3Title"), description: t("landing.feature3Text") },
+    { icon: <Activity size={19} aria-hidden="true" />, title: t("landing.feature4Title"), description: t("landing.feature4Text") },
+    { icon: <BadgeCheck size={19} aria-hidden="true" />, title: t("landing.feature5Title"), description: t("landing.feature5Text") },
+    { icon: <Share2 size={19} aria-hidden="true" />, title: t("landing.feature6Title"), description: t("landing.feature6Text") },
+  ];
+}
+
+function proofCards(t: (key: MessageKey) => string) {
+  return [
+    { number: "01", icon: <LockKeyhole size={15} aria-hidden="true" />, title: t("landing.proof1Title"), description: t("landing.proof1Text") },
+    { number: "02", icon: <Search size={15} aria-hidden="true" />, title: t("landing.proof2Title"), description: t("landing.proof2Text") },
+    { number: "03", icon: <ShieldCheck size={15} aria-hidden="true" />, title: t("landing.proof3Title"), description: t("landing.proof3Text") },
+  ];
+}
+
+function startCards(t: (key: MessageKey) => string) {
+  return [
+    { number: "01", icon: <FileCheck2 size={18} aria-hidden="true" />, title: t("landing.start1Title"), description: t("landing.start1Text"), action: t("landing.start1Action"), href: "/signaler" },
+    { number: "02", icon: <Search size={18} aria-hidden="true" />, title: t("landing.start2Title"), description: t("landing.start2Text"), action: t("landing.start2Action"), href: "/suivi" },
+    { number: "03", icon: <LockKeyhole size={18} aria-hidden="true" />, title: t("landing.start3Title"), description: t("landing.start3Text"), action: t("landing.start3Action"), href: "/connexion?next=%2Fredaction" },
+  ];
+}
+
+function channelCards(t: (key: MessageKey) => string) {
+  return [
+    { icon: <FileCheck2 size={18} aria-hidden="true" />, title: t("landing.channel1Title"), description: t("landing.channel1Text"), href: "/signaler" },
+    { icon: <Search size={18} aria-hidden="true" />, title: t("landing.channel2Title"), description: t("landing.channel2Text"), href: "/suivi" },
+    { icon: <LockKeyhole size={18} aria-hidden="true" />, title: t("landing.channel3Title"), description: t("landing.channel3Text"), href: "/connexion?next=%2Fredaction" },
+    { icon: <Eye size={18} aria-hidden="true" />, title: t("landing.channel4Title"), description: t("landing.channel4Text"), href: "/verification" },
+  ];
+}
+
+export default async function LandingPage() {
+  const locale: Locale = await getServerLocale();
+  const t = (key: MessageKey) => translate(locale, key);
   return (
-    <main className="landing-page" id="top">
-      <header className="landing-header">
-        <Brand />
-        <nav className="landing-nav" aria-label="Navigation principale">
-          <a href="#methode">La méthode</a>
-          <a href="#engagements">Nos engagements</a>
-          <a href="#android">Android</a>
-        </nav>
-        <div className="landing-header__actions">
-          <Link className="landing-login" href="/connexion">Se connecter</Link>
-          <Link className="button button--dark button--small" href="/connexion?next=%2Fverification">Ouvrir Hamarino <ArrowUpRight size={15} /></Link>
-        </div>
-      </header>
-
-      <section className="landing-hero" aria-labelledby="hero-title">
-        <div className="landing-hero__copy">
-          <div className="eyebrow"><span className="eyebrow__rule" /> LE BUREAU DE RECOUPEMENT VISUEL · MADAGASCAR</div>
-          <h1 id="hero-title">Chaque image a une histoire.<br /><em>Vérifions son contexte.</em></h1>
-          <p className="landing-hero__intro">Hamarino aide les journalistes à examiner une image, à retrouver des sources consultables et à savoir ce qu’il reste à confirmer.</p>
-          <div className="landing-hero__actions">
-            <Link className="button button--dark" href="/connexion?next=%2Fverification">Commencer un recoupement <ArrowRight size={16} /></Link>
-            <a className="text-link" href="#methode">Découvrir la méthode <ArrowDown size={14} /></a>
+    <LandingMotion>
+      <main className="landing-page orbit-landing" id="top">
+        <header className="orbit-header">
+          <div className="orbit-header__inner">
+            <Brand homeLabel={t("nav.home")} />
+            <nav aria-label={t("landing.aria")}>
+              <a href="#fonctionnalites">{t("nav.method")}</a>
+              <a href="#demarrer">{t("landing.startLabel")}</a>
+              <a href="#faq">FAQ</a>
+            </nav>
+            <div className="orbit-header__actions">
+              <Link className="orbit-header__login" href="/connexion">{t("nav.login")}</Link>
+              <Link className="orbit-header__button" href="/signaler">{t("nav.report")} <ArrowUpRight size={14} /></Link>
+            </div>
           </div>
-          <div className="landing-hero__footnote"><Check size={14} /> Un outil d’appui éditorial. Pas un verdict automatique.</div>
-        </div>
-        <div className="landing-hero__visual"><EvidenceArtwork /></div>
-        <div className="landing-hero__folio" aria-hidden="true"><span>DOSSIER</span><strong>01</strong><span>URBIX · 2026</span></div>
-      </section>
+        </header>
 
-      <section className="landing-ribbon" aria-label="Principes du service">
-        <span>OBSERVER</span><i /> <span>RECOUPER</span><i /> <span>CONTEXTUALISER</span><i /> <span>DÉCIDER EN RÉDACTION</span>
-      </section>
+        <section className="orbit-hero" aria-labelledby="orbit-title">
+          <OrbitArtwork t={t} />
+          <Reveal className="orbit-hero__content">
+            <div className="orbit-hero__badge"><i /> {t("landing.kicker")}</div>
+            <div className="orbit-hero__emblem" aria-hidden="true"><Image src="/brand/laverta-symbol-on-dark.png" alt="" width={334} height={264} /></div>
+            <h1 id="orbit-title">{t("brand.name")}<span>.</span></h1>
+            <p className="orbit-hero__tagline">{t("landing.titleA")} <em>{t("landing.titleB")}</em></p>
+            <p className="orbit-hero__description">{t("landing.description")}</p>
+            <div className="orbit-hero__actions">
+              <Link className="orbit-button orbit-button--primary" href="/signaler"><FileCheck2 size={15} /> {t("landing.reportCta")} <ArrowRight size={15} /></Link>
+              <Link className="orbit-button orbit-button--quiet" href="/suivi"><Search size={15} /> {t("landing.trackCta")}</Link>
+              <Link className="orbit-button orbit-button--quiet" href="/connexion?next=%2Fredaction"><LockKeyhole size={15} /> {t("nav.editorial")}</Link>
+            </div>
+            <div className="orbit-hero__assurance"><Check size={14} /> {t("landing.human")}</div>
+            <div className="orbit-hero__proof" aria-label={t("landing.ribbonAria")}>
+              {["landing.proof1Title", "landing.proof2Title", "landing.proof3Title"].map((key, index) => <span key={key}>{index > 0 && <i aria-hidden="true" />}{t(key as MessageKey)}</span>)}
+            </div>
+          </Reveal>
+          <div className="orbit-hero__layers" aria-label={t("landing.ribbonAria")}>
+            {["landing.stepSpot", "landing.stepCrosscheck", "landing.stepQualify", "landing.stepCirculate"].map((key, index) => (
+              <span key={key}><i>{String(index + 1).padStart(2, "0")}</i>{t(key as MessageKey)}</span>
+            ))}
+          </div>
+          <div className="orbit-hero__status"><span><i /> {t("landing.prototypeLabel")}</span><small>{t("landing.globeIllustrative")}</small></div>
+        </section>
 
-      <section className="landing-method" id="methode" aria-labelledby="method-title">
-        <div className="section-heading">
-          <div><div className="eyebrow"><span className="eyebrow__rule" /> UNE MÉTHODE LISIBLE</div><h2 id="method-title">Du premier regard<br />à la source consultée.</h2></div>
-          <p>Une image seule ne suffit pas à établir où ni quand une scène a été photographiée. Hamarino rend les pistes et leurs limites visibles, étape par étape.</p>
-        </div>
-        <div className="method-steps">
-          <article className="method-step-card"><span className="method-step-card__number">01</span><div className="method-step-card__mark"><Eye size={19} /></div><h3>Décrire ce qui se voit</h3><p>Déposez une image et formulez le contexte qui circule. Les observations visuelles sont présentées séparément des faits.</p><span className="method-step-card__line" /></article>
-          <article className="method-step-card"><span className="method-step-card__number">02</span><div className="method-step-card__mark"><ArrowUpRight size={19} /></div><h3>Ouvrir les pistes</h3><p>La recherche aide à repérer des publications et sources accessibles pour examiner l’affirmation.</p><span className="method-step-card__line" /></article>
-          <article className="method-step-card"><span className="method-step-card__number">03</span><div className="method-step-card__mark"><Check size={19} /></div><h3>Garder la main</h3><p>Consultez les liens, voyez les incertitudes et choisissez les vérifications à mener avant publication.</p><span className="method-step-card__line" /></article>
-        </div>
-      </section>
+        <section className="landing-traction orbit-section" aria-labelledby="traction-title">
+          <div className="landing-traction__heading"><div className="eyebrow"><span className="eyebrow__rule" /> {t("landing.tractionLabel")}</div><h2 id="traction-title">{t("landing.tractionTitle")}</h2><p>{t("landing.tractionText")}</p></div>
+          <div className="landing-proof-grid">{proofCards(t).map((card) => <RevealArticle className="landing-proof-card" key={card.number}><span className="landing-proof-card__number">{card.number}<i>{card.icon}</i></span><h3>{card.title}</h3><p>{card.description}</p></RevealArticle>)}</div>
+        </section>
 
-      <section className="landing-principles" id="engagements" aria-labelledby="principles-title">
-        <div className="landing-principles__title"><div className="eyebrow eyebrow--light"><span className="eyebrow__rule" /> LA RÉDACTION GARDE LE DERNIER MOT</div><h2 id="principles-title">La preuve d’abord.<br /><em>L’outil à sa juste place.</em></h2><p>Hamarino ne certifie pas l’authenticité d’un fichier. Il aide à organiser un premier recoupement à partir d’indices visuels et de sources consultables.</p><Link className="button button--paper" href="/connexion?next=%2Fverification">Voir l’espace de travail <ArrowRight size={16} /></Link></div>
-        <div className="principle-list">
-          <article><span>01</span><div><h3>Les sources restent visibles</h3><p>Les liens proviennent des citations retournées par la recherche, pas de liens inventés dans un texte de modèle.</p></div><ArrowUpRight size={17} /></article>
-          <article><span>02</span><div><h3>L’incertitude est nommée</h3><p>Sans citation utile, le contexte reste « à vérifier ». Aucun score ne transforme une estimation en certitude.</p></div><ArrowUpRight size={17} /></article>
-          <article><span>03</span><div><h3>Le travail journalistique continue</h3><p>Les pistes proposées sont à consulter et à recouper avec le terrain et les sources locales.</p></div><ArrowUpRight size={17} /></article>
-        </div>
-      </section>
+        <section className="landing-method orbit-section" id="fonctionnalites" aria-labelledby="method-title">
+          <div className="section-heading"><div><div className="eyebrow"><span className="eyebrow__rule" /> {t("landing.featureLabel")}</div><h2 id="method-title">{t("landing.featureTitleA")}<br /><em>{t("landing.featureTitleB")}</em></h2></div><p>{t("landing.featureText")}</p></div>
+          <div className="landing-feature-grid">{featureCards(t).map((card, index) => <RevealArticle className="landing-feature-card" delay={(index % 3) * 0.05} key={card.title}><div className="landing-feature-card__icon">{card.icon}</div><h3>{card.title}</h3><p>{card.description}</p></RevealArticle>)}</div>
+        </section>
 
-      <section className="landing-android" id="android" aria-labelledby="android-title">
-        <div className="landing-android__device" aria-hidden="true"><div className="device-shell"><div className="device-camera" /><div className="device-brand">hamarino<span>.</span></div><div className="device-picture"><div /><i /><b /><span /></div><div className="device-lines"><i /><i /><i /></div><div className="device-source"><span>À VÉRIFIER</span><i /></div><div className="device-tabbar"><i /><i /><i /></div></div><div className="device-shadow" /></div>
-        <div className="landing-android__copy"><div className="eyebrow"><span className="eyebrow__rule" /> L’ENQUÊTE DANS VOTRE POCHE</div><h2 id="android-title">Hamarino, aussi<br /><em>sur Android.</em></h2><p>Une interface pensée pour les écrans mobiles, les images reçues sur le terrain et les vérifications à poursuivre en rédaction.</p><div className="android-release"><button className="button button--dark" type="button" disabled><Download size={16} /> APK en préparation</button><span><Smartphone size={14} /> Téléchargement disponible après publication</span></div></div>
-        <div className="landing-android__stamp">ANDROID<br /><strong>APP</strong><span>URBIX / HMR</span></div>
-      </section>
+        <section className="landing-start orbit-start" id="demarrer" aria-labelledby="start-title">
+          <div className="section-heading"><div><div className="eyebrow"><span className="eyebrow__rule" /> {t("landing.startLabel")}</div><h2 id="start-title">{t("landing.startTitleA")}<br /><em>{t("landing.startTitleB")}</em></h2></div><p>{t("landing.startText")}</p></div>
+          <div className="landing-start-grid">{startCards(t).map((card, index) => <RevealArticle className="landing-start-card" delay={index * 0.05} key={card.number}><span className="landing-start-card__number">{card.number}</span><div className="landing-start-card__icon">{card.icon}</div><h3>{card.title}</h3><p>{card.description}</p><Link href={card.href}>{card.action} <ArrowUpRight size={15} /></Link></RevealArticle>)}</div>
+        </section>
 
-      <section className="landing-cta">
-        <div className="eyebrow"><span className="eyebrow__rule" /> HAMARINO BY URBIX</div>
-        <h2>Une image mérite<br /><em>plus qu’un partage.</em></h2>
-        <p>Donnez à votre équipe un point de départ clair pour vérifier ce qui circule.</p>
-        <Link className="button button--dark" href="/connexion?next=%2Fverification">Entrer dans Hamarino <ArrowRight size={16} /></Link>
-      </section>
+        <section className="landing-bridge orbit-bridge" aria-label={t("landing.bridgeTitle")}><span className="landing-bridge__marker" aria-hidden="true"><Share2 size={19} /></span><div><h2>{t("landing.bridgeTitle")}</h2><p>{t("landing.bridgeText")}</p></div><Link className="button button--paper" href="/suivi">{t("nav.track")} <ArrowRight size={16} /></Link></section>
 
-      <footer className="landing-footer"><Brand /><span>Chaque image mérite ses sources.</span><Link href="/confidentialite">Données et confidentialité</Link><span>© 2026 URBIX · ANTANANARIVO</span><a href="#top">Retour en haut ↑</a></footer>
-    </main>
+        <section className="landing-principles orbit-section" id="transparence" aria-labelledby="principles-title">
+          <div className="landing-principles__title"><div className="eyebrow eyebrow--light"><span className="eyebrow__rule" /> {t("landing.transparencyLabel")}</div><h2 id="principles-title">{t("landing.transparencyTitleA")}<br /><em>{t("landing.transparencyTitleB")}</em></h2><p>{t("landing.transparencyText")}</p><Link className="button button--paper" href="/verification">{t("nav.analysis")} <ArrowRight size={16} /></Link></div>
+          <div className="principle-list">{[1, 2, 3].map((item) => <article key={item}><span>{String(item).padStart(2, "0")}</span><div><h3>{t(`landing.transparency${item}Title` as MessageKey)}</h3><p>{t(`landing.transparency${item}Text` as MessageKey)}</p></div><ArrowUpRight size={17} /></article>)}</div>
+        </section>
+
+        <section className="landing-channels orbit-section" aria-labelledby="channels-title"><div className="section-heading"><div><div className="eyebrow"><span className="eyebrow__rule" /> {t("landing.channelsLabel")}</div><h2 id="channels-title">{t("landing.channelsTitle")}</h2></div><p>{t("landing.channelsText")}</p></div><div className="landing-channel-grid">{channelCards(t).map((card) => <Link className="landing-channel-card" href={card.href} key={card.title}><span className="landing-channel-card__icon">{card.icon}</span><span className="landing-channel-card__copy"><strong>{card.title}</strong><small>{card.description}</small></span><ArrowUpRight size={16} aria-hidden="true" /></Link>)}</div></section>
+
+        <section className="landing-faq orbit-section" id="faq" aria-labelledby="faq-title"><div className="landing-faq__heading"><div className="eyebrow"><span className="eyebrow__rule" /> {t("landing.faqLabel")}</div><h2 id="faq-title">{t("landing.faqTitle")}</h2></div><div className="landing-faq__list">{[1, 2, 3, 4, 5].map((item) => <details className="landing-faq__item" key={item}><summary><span>{t(`landing.faq${item}Question` as MessageKey)}</span><span className="landing-faq__plus" aria-hidden="true" /></summary><p>{t(`landing.faq${item}Answer` as MessageKey)}</p></details>)}</div></section>
+
+        <section className="landing-cta orbit-final"><div className="eyebrow"><span className="eyebrow__rule" /> {t("landing.closeLabel")}</div><h2>{t("landing.closeTitleA")}<br /><em>{t("landing.closeTitleB")}</em></h2><p>{t("landing.closeText")}</p><div className="landing-hero__actions"><Link className="button button--dark" href="/signaler">{t("landing.closePrimary")} <ArrowRight size={16} /></Link><a className="text-link" href="#fonctionnalites">{t("landing.closeSecondary")} <ArrowDown size={14} /></a></div></section>
+
+        <footer className="landing-footer orbit-footer"><Brand homeLabel={t("nav.home")} /><span>{t("brand.tagline")}</span><Link href="/confidentialite">{t("nav.privacy")}</Link><Link href="/landing-editoriale">{t("landing.previousVersion")}</Link><span>{t("landing.footerCopyright")}</span><a href="#top">{t("landing.backTop")}</a></footer>
+      </main>
+    </LandingMotion>
   );
 }

@@ -1,21 +1,38 @@
 import type { Metadata } from "next";
-import { GeistSans } from "geist/font/sans";
-import { GeistSerifRegular } from "geist/font/serif/regular";
+import { Suspense } from "react";
 import "./globals.css";
 import "./marketing.css";
+import "./laverta-refresh.css";
+import { PreferencesControl, PreferencesProvider } from "./preferences";
 
 export const metadata: Metadata = {
-  title: "Hamarino — Chaque image mérite ses sources",
-  description: "Hamarino aide les rédactions à examiner les images, retrouver des sources consultables et vérifier leur contexte.",
-  applicationName: "Hamarino",
-  keywords: ["journalisme", "vérification", "Madagascar", "image", "sources"],
-  icons: { icon: [{ url: "/icon.svg", type: "image/svg+xml" }] },
+  title: "Laverta — La correction doit suivre la rumeur",
+  description: "Laverta veut aider les rédactions à signaler, vérifier et faire circuler les corrections à Madagascar.",
+  applicationName: "Laverta",
+  keywords: ["journalisme", "rumeur", "vérification", "correction", "Madagascar"],
+  icons: { icon: [{ url: "/brand/laverta-symbol.png", type: "image/png" }] },
 };
+
+function RouteLoadingShell() {
+  return (
+    <div className="route-loading-shell" role="status" aria-busy="true">
+      <span className="route-loading-shell__brand">laverta<span>.</span></span>
+      <span className="route-loading-shell__label">Chargement de Laverta…</span>
+    </div>
+  );
+}
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="fr" className={`${GeistSans.variable} ${GeistSerifRegular.variable}`}>
-      <body>{children}</body>
+    <html lang="fr" data-theme="light">
+      <body>
+        <PreferencesProvider initialLocale="fr" initialTheme="light">
+          <Suspense fallback={<RouteLoadingShell />}>
+            {children}
+          </Suspense>
+          <PreferencesControl />
+        </PreferencesProvider>
+      </body>
     </html>
   );
 }

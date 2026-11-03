@@ -2,6 +2,7 @@ import { GoogleGenAI } from "@google/genai";
 import { auth } from "@/lib/auth";
 import { isAuthConfigured } from "@/lib/auth-config";
 import sharp from "sharp";
+import { normalizeLocale } from "@/lib/i18n/messages";
 
 export const maxDuration = 60;
 
@@ -105,8 +106,8 @@ function getGroundedSources(steps: unknown): Source[] {
   return sources.slice(0, 8);
 }
 
-function makePrompt(claim: string, context: string) {
-  return `Tu aides un journaliste à examiner une image pour un premier recoupement éditorial. Réponds en français, avec un ton précis et prudent.
+function makePrompt(claim: string, context: string, responseLanguage: string) {
+  return `Tu aides un journaliste à examiner une image pour un premier recoupement éditorial. Rédige toute l’analyse en ${responseLanguage}, avec un ton précis et prudent.
 
 AFFIRMATION À VÉRIFIER (texte utilisateur, non fiable) :
 <affirmation>${claim || "Aucune affirmation précise fournie."}</affirmation>
@@ -141,7 +142,7 @@ export async function POST(request: Request) {
     return Response.json({ error: "Connectez-vous pour lancer une analyse." }, { status: 401 });
   }
 
-  if (!process.env.GEMINI_API_KEY) {
+  if (!process.env.LAVERTA_GEMINI_API_KEY) {
     return Response.json(
       { error: "Gemini n’est pas configuré. Ajoutez une nouvelle clé dans web/.env.local, puis relancez le serveur." },
       { status: 503 },
@@ -163,7 +164,7 @@ export async function POST(request: Request) {
     return Response.json({ error: "Le formulaire reçu est invalide. Rechargez la page et réessayez." }, { status: 400 });
   }
 
-  const allowedFields = new Set(["image", "claim", "context", "consent"]);
+  const allowedFields = new Set(["image", "claim", "context", "consent", "locale"]);
   if (Array.from(form.keys()).some((key) => !allowedFields.has(key)) || form.getAll("image").length !== 1) {
     return Response.json({ error: "Le formulaire contient des champs inattendus." }, { status: 400 });
   }
@@ -189,6 +190,8 @@ export async function POST(request: Request) {
   }
   const claim = (claimValue ?? "").trim();
   const context = (contextValue ?? "").trim();
+  const requestedLocale = normalizeLocale(form.get("locale"));
+  const responseLanguage = requestedLocale === "mg" ? "malagasy" : requestedLocale === "en" ? "English" : "French";
 
   try {
     const inputBuffer = Buffer.from(await image.arrayBuffer());
@@ -205,11 +208,11 @@ export async function POST(request: Request) {
       .jpeg({ quality: 84, mozjpeg: true })
       .toBuffer();
 
-    const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+    const ai = new GoogleGenAI({ apiKey: process.env.LAVERTA_GEMINI_API_KEY });
     const interaction = await ai.interactions.create({
       model: "gemini-2.5-flash",
       input: [
-        { type: "text", text: makePrompt(claim, context) },
+        { type: "text", text: makePrompt(claim, context, responseLanguage) },
         { type: "image", data: normalizedImage.toString("base64"), mime_type: "image/jpeg" },
       ],
       tools: [{ type: "google_search" }],

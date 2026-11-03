@@ -1,5 +1,5 @@
 {
-  "name": "hamarino",
+  "name": "laverta",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -10,13 +10,16 @@
     "icons:build": "node scripts/generate-brand-icon.mjs",
     "db:start": "docker compose -f compose.yaml up -d postgres",
     "db:stop": "docker compose -f compose.yaml down",
-    "db:migrate": "dotenv -e .env.local -- npx auth@latest migrate --yes --config ./src/lib/auth.ts"
+    "db:migrate:auth": "dotenv -e .env.local -- npx auth@latest migrate --yes --config ./src/lib/auth.ts",
+    "db:migrate:reports": "dotenv -e .env.local -- node scripts/migrate-reports.mjs",
+    "db:migrate": "npm run db:migrate:auth && npm run db:migrate:reports"
   },
   "dependencies": {
     "@google/genai": "^2.32.0",
     "better-auth": "^1.7.15",
-    "geist": "^1.9.0",
+    "lottie-react": "^3.1.2",
     "lucide-react": "^1.66.0",
+    "motion": "^14.9.0",
     "next": "16.4.4",
     "nodemailer": "^10.3.1",
     "pg": "^8.23.1",
