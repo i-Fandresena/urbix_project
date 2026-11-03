@@ -17,6 +17,12 @@ Laverta est déployée directement par Docker Compose sous `/home/laverta`. Aucu
 - Sources, Compose, secrets et inventaires : `/home/laverta/`. Données PostgreSQL : `/home/laverta/data/postgres/`. Sauvegardes : `/home/laverta/backups/`.
 - Le proxy Traefik existant écoute déjà sur 80/443 ; le Compose de Laverta utilise son réseau `coolify`, ses points d’entrée `http`/`https` et son résolveur `letsencrypt`. Cela évite un conflit de ports sans enregistrer Laverta dans le tableau de bord Coolify.
 
+## API publique
+
+`https://api-laverta.aura-plus.site` route les chemins `/api/*` vers les handlers Next.js de l’application existante. Le site utilise toujours son domaine principal pour l’interface et l’authentification. Les requêtes navigateur cross-origin sont autorisées uniquement depuis `https://laverta.aura-plus.site`, sans partage de cookies ; les intégrations d’autres origines doivent passer par une configuration CORS explicite.
+
+Exemples : `GET /api/health`, `POST /api/reports`, `POST /api/reports/track` et le webhook Meta `/api/messenger/webhook`.
+
 ## Secrets
 
 Le fichier `/home/laverta/.env` est réservé à root (`0600`) et n’est jamais suivi par Git. Il contient `POSTGRES_PASSWORD`, `BETTER_AUTH_SECRET`, `LAVERTA_MEDIA_ENCRYPTION_KEY` (32 octets encodés en base64), `BETTER_AUTH_URL`, `BETTER_AUTH_TRUSTED_ORIGINS` et `LAVERTA_EDITOR_EMAILS`. SMTP et les variables Messenger sont facultatifs.

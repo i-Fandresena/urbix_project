@@ -98,6 +98,20 @@ services:
       traefik.http.routers.laverta-https.tls: "true"
       traefik.http.routers.laverta-https.tls.certresolver: letsencrypt
       traefik.http.routers.laverta-https.service: laverta-app
+      traefik.http.routers.laverta-api-http.rule: "Host(`api-laverta.aura-plus.site`) && PathPrefix(`/api/`)"
+      traefik.http.routers.laverta-api-http.entrypoints: http
+      traefik.http.routers.laverta-api-http.middlewares: laverta-https-redirect
+      traefik.http.routers.laverta-api-https.rule: "Host(`api-laverta.aura-plus.site`) && PathPrefix(`/api/`)"
+      traefik.http.routers.laverta-api-https.entrypoints: https
+      traefik.http.routers.laverta-api-https.tls: "true"
+      traefik.http.routers.laverta-api-https.tls.certresolver: letsencrypt
+      traefik.http.routers.laverta-api-https.service: laverta-app
+      traefik.http.routers.laverta-api-https.middlewares: laverta-api-cors
+      traefik.http.middlewares.laverta-api-cors.headers.accesscontrolalloworiginlist: "https://laverta.aura-plus.site"
+      traefik.http.middlewares.laverta-api-cors.headers.accesscontrolallowmethods: "GET,POST,OPTIONS"
+      traefik.http.middlewares.laverta-api-cors.headers.accesscontrolallowheaders: "Content-Type,Authorization"
+      traefik.http.middlewares.laverta-api-cors.headers.accesscontrolmaxage: "300"
+      traefik.http.middlewares.laverta-api-cors.headers.addvaryheader: "true"
       traefik.http.services.laverta-app.loadbalancer.server.port: "3000"
     logging:
       options:
