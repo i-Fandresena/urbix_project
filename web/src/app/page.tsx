@@ -78,6 +78,7 @@ export default async function LandingPage() {
               <a href="#fonctionnalites">{t("nav.method")}</a>
               <a href="#demarrer">{t("landing.startLabel")}</a>
               <a href="#faq">FAQ</a>
+              <Link href="/verifications">{t("nav.publicChecks")}</Link>
             </nav>
             <div className="orbit-header__actions">
               <Link className="orbit-header__login" href="/connexion">{t("nav.login")}</Link>

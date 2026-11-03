@@ -8,7 +8,8 @@ import type { MessageKey } from "@/lib/i18n/messages";
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 const themes = ["education", "agriculture", "health", "economy", "politics", "safety", "other"] as const;
 
-type ReportDraft = { assertion: string; context: string; theme: string; language: string; sourceUrl: string };
+type ReportDraft = { assertion: string; context: string; theme: string; language: string; sourceUrl: string; region: string };
+type InstantAnswer = { publicationId: string; verdict: string; correction: string };
 
 export default function ReportForm() {
   const { t, locale } = useLavertaPreferences();
@@ -18,6 +19,7 @@ export default function ReportForm() {
   const [trackingCode, setTrackingCode] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [draft, setDraft] = useState<ReportDraft | null>(null);
+  const [instant, setInstant] = useState<InstantAnswer | null>(null);
   const [fileError, setFileError] = useState("");
   const [copied, setCopied] = useState(false);
   const [consented, setConsented] = useState(false);
@@ -54,6 +56,7 @@ export default function ReportForm() {
       const nextDraft = {
         assertion: String(values.get("assertion") ?? "").trim(),
         context: String(values.get("context") ?? "").trim(),
+        region: String(values.get("region") ?? "").trim().slice(0, 80),
         theme: String(values.get("theme") ?? "other"),
         language: String(values.get("language") ?? "fr"),
         sourceUrl: typeof sourceUrl === "string" ? sourceUrl.trim() : "",
@@ -84,6 +87,7 @@ export default function ReportForm() {
       if (typeof data !== "object" || data === null || !("trackingCode" in data) || typeof data.trackingCode !== "string") {
         throw new Error(t("report.codeError"));
       }
+      if ("instant" in data && data.instant && typeof data.instant === "object") setInstant(data.instant as InstantAnswer);
       setTrackingCode(data.trackingCode);
     } catch (cause) {
       setError(cause instanceof Error && cause.name === "Error" ? cause.message : t("report.serviceError"));
@@ -109,6 +113,13 @@ export default function ReportForm() {
         <div className="report-success__kicker">{t("report.sent")}</div>
         <h2>{t("report.keepCode")}</h2>
         <p>{t("report.keepCodeText")}</p>
+        {instant && (
+          <div className="tracking-correction" role="status">
+            <strong>{t("report.instantTitle")}</strong>
+            <p>{instant.correction}</p>
+            <a href={`/verifications/${encodeURIComponent(instant.publicationId)}`}>{t("report.instantLink")} <ArrowRight size={14} /></a>
+          </div>
+        )}
         <div className="tracking-code"><strong>{trackingCode}</strong><button type="button" onClick={copyCode} aria-label={t("report.copyCode")}>{copied ? <Check size={17} /> : <Copy size={17} />}</button></div>
         <p className="report-success__privacy">{t("report.codePrivate")}</p>
         <a className="report-primary" href={`/suivi#${encodeURIComponent(trackingCode)}`}>{t("report.openTracking")} <ArrowRight size={16} /></a>
@@ -136,6 +147,9 @@ export default function ReportForm() {
           <label className="report-field">{t("report.context")} <span className="optional-label">{t("report.optional")}</span>
             <textarea name="context" maxLength={1200} defaultValue={draft?.context ?? ""} placeholder={t("report.contextPlaceholder")} rows={3} />
           </label>
+          <label className="report-field">{t("report.region")} <span className="optional-label">{t("report.optional")}</span>
+            <input name="region" type="text" maxLength={80} defaultValue={draft?.region ?? ""} placeholder={t("report.regionPlaceholder")} />
+          </label>
           <div className="report-form__step report-form__step--media"><span>02</span><div><strong>{t("report.stepMedia")}</strong><small>{t("report.stepMediaHint")}</small></div></div>
           <label className="report-field">{t("report.image")}
             <span className="upload-field"><Upload size={17} /><span>{file ? file.name : t("report.chooseImage")}<small>{file ? `${(file.size / 1024 / 1024).toFixed(1)} Mo · 5 Mo max.` : t("report.imageEncrypted")}</small></span><input ref={fileRef} type="file" name="media" accept="image/jpeg,image/png,image/webp" onChange={selectFile} /></span>
@@ -160,6 +174,7 @@ export default function ReportForm() {
             <input type="hidden" name="theme" value={draft?.theme ?? "other"} />
             <input type="hidden" name="language" value={draft?.language ?? "fr"} />
             <input type="hidden" name="sourceUrl" value={draft?.sourceUrl ?? ""} />
+            <input type="hidden" name="region" value={draft?.region ?? ""} />
             <span>{t("report.assertionShort")}</span><p>{draft?.assertion}</p>
             <div><span>{t("report.theme")}</span><strong>{draft?.theme ? t(`theme.${draft.theme}` as MessageKey) : t("theme.other")}</strong></div>
             <div><span>{t("report.mediaShort")}</span><strong>{file ? t("report.attachedImage", { name: file.name }) : t("report.publicationLink")}</strong></div>

@@ -1,84 +1,149 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { ArrowLeft, ExternalLink, FileImage, ShieldCheck } from "lucide-react";
-import { getAuthSession } from "@/lib/auth";
-import { isAuthConfigured } from "@/lib/auth-config";
-import { getEditorialReport, REPORT_STATUSES, REPORT_VERDICTS, type ReportRow, type ReportStatus, type ReportVerdict, type ReportTheme } from "@/lib/reports";
-import { isEditorialSession } from "@/lib/report-access";
-import { saveEditorialDecision } from "@/app/redaction/actions";
+import { ExternalLink, FileImage, ShieldCheck } from "lucide-react";
+import { assignCaseAction, detachMemberAction, referCaseAction, saveEditorialDecision } from "@/app/redaction/actions";
+import { Notice, StaffShell } from "@/app/staff-shell";
 import { getServerLocale } from "@/lib/i18n/server";
-import { translate, type Locale, type MessageKey } from "@/lib/i18n/messages";
-import { BrandLockup } from "@/app/brand-lockup";
+import { staffTranslator } from "@/lib/i18n/staff";
+import { REPORT_STATUSES, REPORT_VERDICTS } from "@/lib/reports";
+import { canSeeReport, EDITORIAL_ROLES, isManager, listJournalists, listOrganizations, requireRole } from "@/lib/staff";
+import { getCase, getCaseDetails } from "@/lib/workflow";
 
 export const metadata: Metadata = { title: "Dossier éditorial — Laverta", description: "Examen d’un signalement par la rédaction Laverta." };
 
-const statusMessageKeys: Record<ReportStatus, MessageKey> = { new: "status.new", in_review: "status.inReview", referred: "status.referred", verified: "status.verified", closed: "status.closed" };
-const verdictMessageKeys: Record<ReportVerdict, MessageKey> = { false: "verdict.false", true: "verdict.true", misleading: "verdict.misleading", unverifiable: "verdict.unverifiable" };
-const themeMessageKeys: Record<ReportTheme, MessageKey> = { education: "theme.education", agriculture: "theme.agriculture", health: "theme.health", economy: "theme.economy", politics: "theme.politics", safety: "theme.safety", other: "theme.other" };
-
 export default async function EditorialCasePage(props: { params: Promise<{ id: string }>; searchParams: Promise<{ saved?: string; error?: string }> }) {
-  const locale: Locale = await getServerLocale();
-  const t = (key: MessageKey, values?: Record<string, string | number>) => translate(locale, key, values);
+  const locale = await getServerLocale();
+  const t = staffTranslator(locale);
   const { id } = await props.params;
-  const query = await props.searchParams;
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
-  if (!isAuthConfigured()) redirect("/redaction");
-  let session: Awaited<ReturnType<typeof getAuthSession>>;
-  try { session = await getAuthSession(); } catch { redirect("/connexion?next=%2Fredaction"); }
-  if (!session) redirect("/connexion?next=%2Fredaction");
-  if (!isEditorialSession(session)) redirect("/redaction");
-
-  let report: ReportRow | null;
-  try { report = await getEditorialReport(id); } catch { redirect("/redaction?error=missing"); }
-  if (!report) notFound();
+  const { member } = await requireRole(EDITORIAL_ROLES, `/redaction/dossiers/${id}`);
+  const query = await props.searchParams;
+  const report = await getCase(id);
+  if (!report) redirect("/redaction?error=missing");
+  if (report.cluster_id) redirect(`/redaction/dossiers/${report.cluster_id}`);
+  if (!canSeeReport(member, report)) redirect("/espace?refus=1");
+  const manager = isManager(member);
+  const [details, journalists, organizations] = await Promise.all([getCaseDetails(id), manager ? listJournalists() : Promise.resolve([]), listOrganizations()]);
+  const dateTime = new Intl.DateTimeFormat(locale === "mg" ? "fr" : locale, { dateStyle: "medium", timeStyle: "short" });
+  const canSeeIdentity = manager || report.assigned_to === member.email;
+  const reporter = report.channel === "correspondent"
+    ? (canSeeIdentity ? report.submitted_by ?? "—" : t("case.identityMasked"))
+    : report.channel === "messenger" ? t("case.messengerMasked") : t("case.anonymous");
 
   return (
-    <main className="editorial-page">
-      <header className="editorial-header">
-        <BrandLockup href="/redaction" label={t("editorial.backQueue")} />
-        <nav><Link href="/redaction">{t("editorial.backQueue")}</Link><Link href="/suivi">{t("editorial.openTracking")}</Link></nav>
-        <span className="editorial-header__user">{t("editorial.user", { email: session.user.email })}</span>
-      </header>
-      <section className="editorial-shell editorial-shell--case">
-        <Link className="editorial-back" href="/redaction"><ArrowLeft size={14} /> {t("editorial.backQueue")}</Link>
-        <div className="editorial-case-top"><div><div className="editorial-eyebrow">LV ···· {report.tracking_hint}</div><h1>{t("case.title")}</h1></div><span className={`report-status report-status--${report.status}`}>{t(statusMessageKeys[report.status])}</span></div>
+    <StaffShell member={member} t={t} active="/redaction" eyebrow={`LV ···· ${report.tracking_hint}`} title={t("case.title")}>
+      <nav className="staff-breadcrumb" aria-label={t("case.breadcrumb")}><Link href="/redaction">{t("nav.queue")}</Link><span aria-hidden="true">/</span><span>LV ···· {report.tracking_hint}</span></nav>
+      {query.saved && <Notice tone="success">{t(`case.saved.${query.saved}` as "case.saved.decision")}</Notice>}
+      {query.error && <Notice tone="error">{t(query.error === "save" ? "case.errorSave" : "case.errorInvalid")}</Notice>}
+      {report.instant_publication_id && <Notice>{t("case.instant")} <Link href={`/verifications/${report.instant_publication_id}`}>{t("case.openPublication")}</Link></Notice>}
 
-        {query.saved === "1" && <p className="editorial-success"><ShieldCheck size={15} /> {t("case.saved")}</p>}
-        {query.error === "invalid" && <p className="editorial-alert">{t("case.invalid")}</p>}
-        {query.error === "save" && <p className="editorial-alert">{t("case.saveError")}</p>}
-
-        <div className="case-grid">
-          <article className="case-evidence">
-            <div className="case-section-head"><div><span>{t("case.signal")}</span><h2>{t("case.circulates")}</h2></div><time dateTime={report.submitted_at.toISOString()}>{report.submitted_at.toLocaleString(locale === "mg" ? "mg-MG" : locale, { dateStyle: "medium", timeStyle: "short" })}</time></div>
-            <blockquote>{report.assertion}</blockquote>
-            <div className="case-facts"><div><span>{t("case.theme")}</span><strong>{t(themeMessageKeys[report.theme] ?? "theme.other")}</strong></div><div><span>{t("case.language")}</span><strong>{report.language.toUpperCase()}</strong></div></div>
-            {report.context && <div className="case-context"><span>{t("case.context")}</span><p>{report.context}</p></div>}
-            {report.source_url && <a className="case-source-link" href={report.source_url} target="_blank" rel="noopener noreferrer nofollow" referrerPolicy="no-referrer"><ExternalLink size={15} /><span><small>{t("case.linkByReporter")}</small>{new URL(report.source_url).hostname}</span></a>}
-            {report.media_mime_type ? (
-              <div className="case-media"><div className="case-media__head"><FileImage size={15} /><span>{t("case.originalImage", { size: Math.ceil((report.media_size ?? 0) / 1024) })}</span><code>SHA-256 · {report.media_sha256?.slice(0, 12)}…</code></div><img src={`/api/redaction/reports/${report.id}/media`} alt={t("case.imageAlt")} referrerPolicy="no-referrer" /><p>{t("case.imageIntegrity")}</p></div>
-            ) : (
-              <div className="case-no-media"><FileImage size={16} /> {t("case.noImage")}</div>
+      <div className="staff-split">
+        <div className="staff-stack">
+          <section className="staff-card">
+            <div className="staff-meta"><span className="staff-tag staff-tag--strong">{t(`status.${report.status}`)}</span><span>{t(`theme.${report.theme}`)}</span><span>{t(`channel.${report.channel}`)}</span><span>{report.language.toUpperCase()}</span>{report.region && <span>{report.region}</span>}<time dateTime={report.submitted_at.toISOString()}>{dateTime.format(report.submitted_at)}</time></div>
+            <h2 style={{ marginTop: 12 }}>{t("case.claim")}</h2>
+            <blockquote className="staff-quote">{report.assertion}</blockquote>
+            {report.context && <p className="staff-muted">{report.context}</p>}
+            <p className="staff-muted">{t("case.reporter")} : {reporter}</p>
+            {report.source_url && <p><a href={report.source_url} target="_blank" rel="noopener noreferrer nofollow" referrerPolicy="no-referrer"><ExternalLink size={14} aria-hidden="true" /> {new URL(report.source_url).hostname}</a></p>}
+            {report.media_mime_type && (
+              <figure style={{ margin: 0 }}>
+                <img src={`/api/redaction/reports/${report.id}/media`} alt={t("case.imageAlt")} referrerPolicy="no-referrer" style={{ maxWidth: "100%", borderRadius: 8 }} />
+                <figcaption className="staff-muted"><FileImage size={13} aria-hidden="true" /> SHA-256 · {report.media_sha256?.slice(0, 12)}… · {t("case.imageNote")}</figcaption>
+              </figure>
             )}
-          </article>
+          </section>
 
-          <section className="case-decision">
-            <div className="case-section-head"><div><span>{t("case.humanDecision")}</span><h2>{t("case.sourcesCorrection")}</h2></div></div>
-            <p className="case-editor-note">{t("case.aiNotUsed")}</p>
-            <form action={saveEditorialDecision} className="editorial-form">
+          <section className="staff-card">
+            <h2>{t("case.duplicates", { count: details.members.length + 1 })}</h2>
+            {details.members.length === 0 ? <p className="staff-muted">{t("case.noDuplicates")}</p> : (
+              <ul className="staff-list" style={{ padding: 0, listStyle: "none" }}>
+                {details.members.map((item) => (
+                  <li className="staff-item" key={item.id}>
+                    <div className="staff-meta"><span>{t(`channel.${item.channel}`)}</span>{item.region && <span>{item.region}</span>}<span>{dateTime.format(item.submitted_at)}</span></div>
+                    <span>{item.assertion}</span>
+                    <form action={detachMemberAction}><input type="hidden" name="id" value={item.id} /><input type="hidden" name="root" value={report.id} /><button className="staff-btn staff-btn--quiet" type="submit">{t("case.detach")}</button></form>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+
+          <section className="staff-card">
+            <h2>{t("case.related")}</h2>
+            <p className="staff-muted">{t("case.relatedHint")}</p>
+            {details.related.length === 0 ? <p className="staff-muted">{t("case.noRelated")}</p> : details.related.map((item) => (
+              <p key={item.id}><Link href={`/verifications/${item.id}`}>{t(`verdict.${item.verdict}`)} — {item.assertion.slice(0, 120)}</Link> <span className="staff-muted">({Math.round(item.score * 100)} %)</span></p>
+            ))}
+          </section>
+
+          {report.referred_to && (
+            <section className="staff-card">
+              <h2>{t("case.orgTitle", { org: report.referred_to })}</h2>
+              <p className="staff-muted">{t(`org.${report.org_status ?? "pending"}`)}{report.referred_at ? ` · ${dateTime.format(report.referred_at)}` : ""}</p>
+              <p><strong>{t("case.sentSummary")}</strong><br />{report.referral_summary}</p>
+              {report.org_response ? <><p><strong>{t("case.orgResponse")}</strong><br />{report.org_response}</p>{report.org_links.map((link) => <p key={link.url}><a href={link.url} target="_blank" rel="noopener noreferrer nofollow">{link.title}</a></p>)}</> : <p className="staff-muted">{t("case.orgWaiting")}</p>}
+            </section>
+          )}
+
+          {manager && (
+            <details className="staff-card">
+              <summary>{t("case.audit")}</summary>
+              <table className="staff-table"><tbody>{details.audit.map((entry, index) => <tr key={index}><td>{dateTime.format(entry.created_at)}</td><td>{entry.actor_email}</td><td>{entry.action}</td><td><code>{JSON.stringify(entry.after_state).slice(0, 80)}</code></td></tr>)}</tbody></table>
+            </details>
+          )}
+        </div>
+
+        <div className="staff-stack">
+          <section className="staff-card">
+            <h2>{t("case.assignment")}</h2>
+            <p className="staff-muted">{report.assigned_to ? t("queue.assigned", { email: report.assigned_to }) : t("queue.unassigned")}</p>
+            <form action={assignCaseAction} className="staff-form">
               <input type="hidden" name="id" value={report.id} />
-              <label>{t("case.status")}<select name="status" defaultValue={report.status}>{REPORT_STATUSES.map((status) => <option key={status} value={status}>{t(statusMessageKeys[status])}</option>)}</select></label>
-              <label>{t("case.verdict")}<select name="verdict" defaultValue={report.verdict ?? ""}><option value="">{t("case.noVerdict")}</option>{REPORT_VERDICTS.map((verdict) => <option key={verdict} value={verdict}>{t(verdictMessageKeys[verdict])}</option>)}</select></label>
-              <label>{t("case.rationale")}<textarea name="rationale" defaultValue={report.rationale ?? ""} maxLength={1200} rows={4} placeholder={t("case.rationalePlaceholder")} /></label>
-              <label>{t("case.sources")} <small>{t("case.sourcesHint")}</small><textarea name="sources" defaultValue={report.sources.map((source) => source.url).join("\n")} maxLength={16000} rows={4} placeholder="https://source-officielle.mg/communique" /></label>
-              <label>{t("case.correction")} <small>{t("case.correctionHint")}</small><textarea name="correction" defaultValue={report.correction ?? ""} maxLength={1200} rows={5} placeholder={t("case.correction")} /></label>
-              <div className="editorial-form__rule"><ShieldCheck size={15} /><span>{t("case.publishRule")}</span></div>
-              <button className="report-primary" type="submit">{t("case.save")}</button>
+              {manager ? (
+                <label>{t("case.assignTo")}<select name="assignee" defaultValue={report.assigned_to ?? ""}><option value="">{t("queue.unassigned")}</option>{[...new Set([member.email, ...journalists.map((item) => item.email)])].map((email) => <option key={email} value={email}>{email}</option>)}</select></label>
+              ) : <input type="hidden" name="assignee" value={member.email} />}
+              <button className="staff-btn staff-btn--quiet" type="submit">{manager ? t("case.assign") : t("case.takeCase")}</button>
             </form>
           </section>
+
+          <section className="staff-card">
+            <h2>{t("case.decision")}</h2>
+            <p className="staff-muted">{t("case.humanRule")}</p>
+            <form action={saveEditorialDecision} className="staff-form">
+              <input type="hidden" name="id" value={report.id} />
+              <label>{t("field.status")}<select name="status" defaultValue={report.status}>{REPORT_STATUSES.map((status) => <option key={status} value={status}>{t(`status.${status}`)}</option>)}</select></label>
+              <label>{t("case.verdict")}<select name="verdict" defaultValue={report.verdict ?? ""}><option value="">{t("case.noVerdict")}</option>{REPORT_VERDICTS.map((verdict) => <option key={verdict} value={verdict}>{t(`verdict.${verdict}`)}</option>)}</select></label>
+              <label>{t("case.publicClaim")} <small>{t("case.publicClaimHint")}</small><textarea name="publicAssertion" rows={3} minLength={12} maxLength={500} defaultValue={report.assertion} /></label>
+              <label>{t("case.rationale")}<textarea name="rationale" rows={4} maxLength={1200} defaultValue={report.rationale ?? ""} /></label>
+              <label>{t("case.sources")} <small>{t("case.sourcesHint")}</small><textarea name="sources" rows={3} maxLength={16000} defaultValue={report.sources.map((source) => source.url).join("\n")} placeholder="https://" /></label>
+              <label>{t("case.correction")} <small>{t("case.correctionHint")}</small><textarea name="correction" rows={5} maxLength={1200} defaultValue={report.correction ?? ""} /></label>
+              <p className="staff-muted"><ShieldCheck size={13} aria-hidden="true" /> {t("case.publishRule")}</p>
+              <button className="staff-btn" type="submit">{t("action.save")}</button>
+            </form>
+            {details.publication && !details.publication.withdrawn_at && (
+              <div style={{ marginTop: 14 }}>
+                <p><Link href={`/verifications/${details.publication.id}`}>{t("case.openPublication")}</Link></p>
+                <p className="staff-muted">{t("case.reach", { reach: details.publication.reach_count, instant: details.publication.instant_answer_count })}</p>
+              </div>
+            )}
+          </section>
+
+          <section className="staff-card">
+            <h2>{t("case.refer")}</h2>
+            {organizations.length === 0 ? <p className="staff-muted">{t("case.noOrganizations")}</p> : (
+              <form action={referCaseAction} className="staff-form">
+                <input type="hidden" name="id" value={report.id} />
+                <label>{t("case.organization")}<select name="organization" defaultValue={report.referred_to ?? organizations[0]} required>{organizations.map((org) => <option key={org} value={org}>{org}</option>)}</select></label>
+                <label>{t("case.referSummary")} <small>{t("case.referSummaryHint")}</small><textarea name="summary" rows={4} minLength={30} maxLength={1200} required defaultValue={report.referral_summary ?? ""} /></label>
+                <button className="staff-btn staff-btn--quiet" type="submit">{t("case.send")}</button>
+              </form>
+            )}
+          </section>
+          <p className="staff-muted">{t("case.expiry", { date: report.expires_at.toLocaleDateString(locale === "mg" ? "fr" : locale) })}</p>
         </div>
-        <p className="editorial-footnote">{t("case.expiry", { date: report.expires_at.toLocaleDateString(locale === "mg" ? "mg-MG" : locale) })}</p>
-      </section>
-    </main>
+      </div>
+    </StaffShell>
   );
 }

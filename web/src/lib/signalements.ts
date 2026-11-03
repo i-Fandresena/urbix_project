@@ -2,6 +2,7 @@ import { randomInt } from "node:crypto";
 import { pool } from "@/lib/db";
 import { STEPS, type CompleteDraft, type Conversation, type SignalementSummary } from "@/lib/messenger-flow";
 import { isLanguage, type Language } from "@/lib/messenger-messages";
+import { mirrorSignalement } from "@/lib/messenger-bridge";
 
 // Sans 0, O, 1, I ni L pour qu’un code se recopie sans erreur.
 const CODE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
@@ -55,10 +56,14 @@ export async function createSignalement(psid: string, draft: CompleteDraft, lang
     const code = newCode();
     const result = await database().query(
       `INSERT INTO signalement (code, kind, theme, content, seen_on, region, attachment_count, language, reporter_psid)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) ON CONFLICT (code) DO NOTHING`,
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) ON CONFLICT (code) DO NOTHING RETURNING id`,
       [code, draft.kind, draft.theme, draft.content, draft.seenOn ?? null, draft.region ?? null, draft.attachmentCount ?? 0, language, psid],
     );
-    if (result.rowCount === 1) return code;
+    if (result.rowCount === 1) {
+      // Le signalement rejoint la file de rédaction ; une erreur ici ne doit pas priver le citoyen de son code.
+      await mirrorSignalement(Number(result.rows[0].id)).catch((error) => console.error("Pont Messenger vers la rédaction impossible.", error instanceof Error ? error.name : "unknown"));
+      return code;
+    }
   }
   throw new Error("Impossible d’attribuer un code de suivi.");
 }

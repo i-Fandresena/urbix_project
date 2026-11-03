@@ -18,6 +18,9 @@ export type NewReport = {
   theme: ReportTheme;
   language: ReportLanguage;
   sourceUrl: string | null;
+  region?: string | null;
+  channel?: "web" | "correspondent";
+  submittedBy?: string | null;
   media: {
     ciphertext: Buffer;
     nonce: Buffer;
@@ -97,8 +100,8 @@ export async function createReport(input: NewReport) {
   await db.query(
     `INSERT INTO laverta_reports (
       id, tracking_hash, tracking_hint, assertion, context, theme, language, source_url,
-      media_ciphertext, media_nonce, media_tag, media_mime_type, media_size, media_sha256
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
+      media_ciphertext, media_nonce, media_tag, media_mime_type, media_size, media_sha256, region, channel, submitted_by
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)`,
     [
       id,
       trackingHash(code),
@@ -114,9 +117,12 @@ export async function createReport(input: NewReport) {
       input.media?.mimeType ?? null,
       input.media?.size ?? null,
       input.media?.sha256 ?? null,
+      input.region || null,
+      input.channel ?? "web",
+      input.submittedBy ?? null,
     ],
   );
-  return code;
+  return { code, id };
 }
 
 export async function findPublicReport(code: string) {
@@ -134,13 +140,14 @@ export async function findPublicReport(code: string) {
     submitted_at: Date;
     updated_at: Date;
     published_at: Date | null;
+    publication_id: string | null;
   }>(
-    `SELECT assertion, theme, status,
-      CASE WHEN published_at IS NOT NULL THEN verdict ELSE NULL END AS verdict,
-      CASE WHEN published_at IS NOT NULL THEN correction ELSE NULL END AS correction,
-      CASE WHEN published_at IS NOT NULL THEN sources ELSE '[]'::jsonb END AS sources,
-      media_ciphertext IS NOT NULL AS has_media, submitted_at, updated_at, published_at
-     FROM laverta_reports WHERE tracking_hash = $1 AND expires_at > now()`,
+    `SELECT r.assertion, r.theme, CASE WHEN p.id IS NOT NULL THEN 'verified' ELSE r.status END AS status,
+      p.verdict, p.correction, COALESCE(p.sources, '[]'::jsonb) AS sources,
+      r.media_ciphertext IS NOT NULL AS has_media, r.submitted_at, r.updated_at, p.published_at, p.id AS publication_id
+     FROM laverta_reports r
+     LEFT JOIN laverta_publications p ON p.report_id = COALESCE(r.cluster_id, r.id) AND p.withdrawn_at IS NULL
+     WHERE r.tracking_hash = $1 AND r.expires_at > now()`,
     [hash],
   );
   return result.rows[0] ?? null;

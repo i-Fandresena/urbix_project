@@ -1,18 +1,22 @@
 import { getEditorialMediaBytes, getEncryptedReportMedia } from "@/lib/reports";
-import { getEditorialSession } from "@/lib/report-access";
+import { getEditorialContext } from "@/lib/report-access";
+import { canSeeReport } from "@/lib/staff";
+import { getCase } from "@/lib/workflow";
 
 export async function GET(_request: Request, context: { params: Promise<{ id: string }> }) {
-  let session;
+  let editorial;
   try {
-    session = await getEditorialSession();
+    editorial = await getEditorialContext();
   } catch {
     return new Response("Service de session indisponible.", { status: 503 });
   }
-  if (!session) return new Response("Connexion rédaction requise.", { status: 401, headers: { "Cache-Control": "no-store" } });
+  if (!editorial) return new Response("Connexion rédaction requise.", { status: 401, headers: { "Cache-Control": "no-store" } });
 
   const { id } = await context.params;
   if (!/^[0-9a-f-]{36}$/i.test(id)) return new Response("Dossier introuvable.", { status: 404 });
   try {
+    const report = await getCase(id);
+    if (!report || !canSeeReport(editorial.member, report)) return new Response("Dossier introuvable.", { status: 404 });
     const media = await getEncryptedReportMedia(id);
     if (!media) return new Response("Aucune image jointe.", { status: 404 });
     const bytes = await getEditorialMediaBytes(media);

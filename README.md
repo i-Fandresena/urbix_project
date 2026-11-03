@@ -67,3 +67,7 @@ Le formulaire de signalement conserve l’affirmation, le contexte, le lien four
 Le PDF Laverta propose des objectifs de stratégie, pas des résultats observés. Les intégrations Meta, WhatsApp, SMS, USSD, recherche inversée et extension nécessitent une validation réelle de leurs API, autorisations, conditions, couverture et éventuels coûts.
 
 Le développement doit respecter BRAND_GUIDELINES.md et PRODUCT_SPEC.md. Le logo et la mascotte choisis par l’équipe sont dans `DA/` ; les variantes web utilisées par l’application sont dans `web/public/brand/`. Le brief de création de logo reste disponible dans [PROMPT_LOGO_LAVERTA.md](PROMPT_LOGO_LAVERTA.md). Claude Code reçoit les tâches de revue sécurité et Framer Motion décrites dans CLAUDE.md.
+
+## Rôles et espaces (novembre 2026)
+
+Citoyen sans compte (`/signaler`, `/suivi`, `/verifications`), administrateur (`/admin`), rédacteur en chef et journaliste (`/redaction`, `/redaction/statistiques`), correspondant (`/correspondant`), organisme externe (`/organisme`). Après connexion, `/espace` oriente vers l’espace du rôle. Détails et limites : PRODUCT_SPEC.md.

@@ -25,7 +25,7 @@ Exemples : `GET /api/health`, `POST /api/reports`, `POST /api/reports/track` et 
 
 ## Secrets
 
-Le fichier `/home/laverta/.env` est réservé à root (`0600`) et n’est jamais suivi par Git. Il contient `POSTGRES_PASSWORD`, `BETTER_AUTH_SECRET`, `LAVERTA_MEDIA_ENCRYPTION_KEY` (32 octets encodés en base64), `BETTER_AUTH_URL`, `BETTER_AUTH_TRUSTED_ORIGINS` et `LAVERTA_EDITOR_EMAILS`. SMTP et les variables Messenger sont facultatifs.
+Le fichier `/home/laverta/.env` est réservé à root (`0600`) et n’est jamais suivi par Git. Il contient `POSTGRES_PASSWORD`, `BETTER_AUTH_SECRET`, `LAVERTA_MEDIA_ENCRYPTION_KEY` (32 octets encodés en base64), `BETTER_AUTH_URL`, `BETTER_AUTH_TRUSTED_ORIGINS`, `LAVERTA_EDITOR_EMAILS` et `LAVERTA_ADMIN_EMAILS` (administrateurs d’amorçage). `AUTH_SMTP_URL`/`AUTH_EMAIL_FROM` activent la confirmation d’adresse, la réinitialisation et les notifications (Resend en SMTP, domaine aura-plus.site) ; les variables Messenger sont facultatives.
 
 Ne réutilisez pas la clé Gemini précédemment partagée dans la conversation : elle est considérée compromise. `LAVERTA_GEMINI_API_KEY` reste vide jusqu’à la création d’une nouvelle clé. Sauvegardez séparément le fichier de configuration chiffré et la clé média ; perdre cette dernière rend les médias chiffrés irrécupérables.
 

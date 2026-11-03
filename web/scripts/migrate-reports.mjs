@@ -1,4 +1,4 @@
-import { readFile } from "node:fs/promises";
+import { readdir, readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import pg from "pg";
 
@@ -8,15 +8,15 @@ if (!connectionString) {
   process.exit(1);
 }
 
-const migrationPath = resolve(process.cwd(), "db/migrations/001_laverta_reports.sql");
-const migration = await readFile(migrationPath, "utf8");
+const migrationsDir = resolve(process.cwd(), "db/migrations");
+const files = (await readdir(migrationsDir)).filter((name) => name.endsWith(".sql")).sort();
 const pool = new pg.Pool({ connectionString, max: 1, connectionTimeoutMillis: 5_000 });
 
 try {
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
-    await client.query(migration);
+    for (const file of files) await client.query(await readFile(resolve(migrationsDir, file), "utf8"));
     await client.query("COMMIT");
     process.stdout.write("Schéma de signalements Laverta appliqué.\n");
   } catch (error) {

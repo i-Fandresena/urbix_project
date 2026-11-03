@@ -13,7 +13,8 @@ type LoginFormProps = { configured: boolean; emailConfigured: boolean; serviceUn
 
 function getSafeDestination() {
   const next = new URLSearchParams(window.location.search).get("next");
-  return next === "/verification" ? next : "/verification";
+  // Chemin interne uniquement : pas de redirection ouverte vers un autre site.
+  return next && /^\/[a-z0-9/-]*$/i.test(next) && !next.startsWith("//") ? next : "/espace";
 }
 
 export default function LoginForm({ configured, emailConfigured, serviceUnavailable = false }: LoginFormProps) {
@@ -57,7 +58,7 @@ export default function LoginForm({ configured, emailConfigured, serviceUnavaila
           email,
           password,
           organization,
-          callbackURL: "/verification",
+          callbackURL: "/espace",
         });
         if (error) throw error;
         if (emailConfigured) {
@@ -67,13 +68,15 @@ export default function LoginForm({ configured, emailConfigured, serviceUnavaila
         router.replace(getSafeDestination());
         router.refresh();
       } else {
-        const { error } = await authClient.signIn.email({ email, password, callbackURL: "/verification" });
+        const { error } = await authClient.signIn.email({ email, password, callbackURL: "/espace" });
         if (error) throw error;
         router.replace(getSafeDestination());
         router.refresh();
       }
-    } catch {
-      setFeedback({ tone: "error", text: mode === "signup" ? t("auth.signupFailed") : t("auth.loginFailed") });
+    } catch (cause) {
+      const code = typeof cause === "object" && cause !== null && "code" in cause ? String(cause.code) : "";
+      if (code === "EMAIL_NOT_VERIFIED") setFeedback({ tone: "info", text: t("auth.confirmSent") });
+      else setFeedback({ tone: "error", text: mode === "signup" ? t("auth.signupFailed") : t("auth.loginFailed") });
     } finally {
       setBusy(false);
     }

@@ -1,5 +1,6 @@
 import sharp from "sharp";
 import { createHash } from "node:crypto";
+import { processNewReport } from "@/lib/workflow";
 import { createReport, purgeExpiredReports, REPORT_LANGUAGES, REPORT_THEMES, type ReportLanguage, type ReportTheme } from "@/lib/reports";
 import { encryptReportMedia, isMediaEncryptionConfigured } from "@/lib/report-media";
 import { consumeReportSubmission, hasTrustedOrigin } from "@/lib/report-request";
@@ -8,7 +9,7 @@ export const maxDuration = 30;
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 const MAX_REQUEST_BYTES = MAX_IMAGE_BYTES + 96 * 1024;
-const allowedFields = new Set(["assertion", "context", "theme", "language", "sourceUrl", "media", "consent", "website"]);
+const allowedFields = new Set(["assertion", "context", "theme", "language", "sourceUrl", "media", "consent", "website", "region"]);
 
 function formString(form: FormData, name: string) {
   const value = form.get(name);
@@ -74,15 +75,19 @@ export async function POST(request: Request) {
     let media: Awaited<ReturnType<typeof prepareMedia>> | null = null;
     if (uploadedFile) media = await prepareMedia(uploadedFile);
     await purgeExpiredReports();
-    const trackingCode = await createReport({
+    const region = formString(form, "region").slice(0, 80);
+    const { code: trackingCode, id } = await createReport({
       assertion,
       context,
       theme: theme as ReportTheme,
       language: language as ReportLanguage,
       sourceUrl,
+      region,
       media,
     });
-    return Response.json({ trackingCode }, { status: 201, headers: { "Cache-Control": "no-store", "Referrer-Policy": "no-referrer" } });
+    const match = await processNewReport(id).catch(() => null);
+    const instant = match ? { publicationId: match.id, verdict: match.verdict, correction: match.correction } : null;
+    return Response.json({ trackingCode, instant }, { status: 201, headers: { "Cache-Control": "no-store", "Referrer-Policy": "no-referrer" } });
   } catch (error) {
     if (error instanceof Error && error.message.startsWith("IMAGE_")) {
       const messages: Record<string, string> = {

@@ -1,6 +1,7 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { after } from "next/server";
 import { advance, createdReplies, followReplies, foundReplies, type FlowInput, type Reply } from "@/lib/messenger-flow";
+import { instantReplyFor, publishedReplyFor } from "@/lib/messenger-bridge";
 import { claimEvent, createSignalement, findSignalement, listSignalements, loadConversation, saveConversation } from "@/lib/signalements";
 
 const GRAPH_MESSAGES_URL = "https://graph.facebook.com/v26.0/me/messages";
@@ -43,9 +44,18 @@ async function sendMessage(psid: string, { text, quickReplies }: Reply) {
 async function repliesFor(psid: string, input: FlowInput) {
   const { conversation, replies: flowReplies, effect } = advance(await loadConversation(psid), input);
   let replies = flowReplies;
-  if (effect?.type === "create") replies = createdReplies(effect.language, await createSignalement(psid, effect.draft, effect.language));
+  if (effect?.type === "create") {
+    const code = await createSignalement(psid, effect.draft, effect.language);
+    replies = createdReplies(effect.language, code);
+    const instant = await instantReplyFor(code, effect.language).catch(() => null);
+    if (instant) replies = [...replies, instant];
+  }
   if (effect?.type === "list") replies = followReplies(effect.language, await listSignalements(psid));
-  if (effect?.type === "find") replies = foundReplies(effect.language, effect.code, await findSignalement(psid, effect.code));
+  if (effect?.type === "find") {
+    replies = foundReplies(effect.language, effect.code, await findSignalement(psid, effect.code));
+    const published = await publishedReplyFor(psid, effect.code, effect.language).catch(() => null);
+    if (published) replies = [...replies, published];
+  }
   await saveConversation(psid, conversation);
   return replies;
 }

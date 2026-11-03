@@ -1,80 +1,91 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { redirect } from "next/navigation";
-import { ArrowRight, FileText, LogIn } from "lucide-react";
-import { getAuthSession } from "@/lib/auth";
-import { isAuthConfigured } from "@/lib/auth-config";
-import { isEditorialSession } from "@/lib/report-access";
-import { listEditorialReports, REPORT_STATUSES, REPORT_THEMES, type ReportRow, type ReportStatus, type ReportVerdict, type ReportTheme } from "@/lib/reports";
+import { AlertTriangle, ArrowRight, Image as ImageIcon, Users } from "lucide-react";
+import { Notice, StaffShell } from "@/app/staff-shell";
 import { getServerLocale } from "@/lib/i18n/server";
-import { translate, type Locale, type MessageKey } from "@/lib/i18n/messages";
-import { BrandLockup } from "@/app/brand-lockup";
+import { staffTranslator } from "@/lib/i18n/staff";
+import { REPORT_LANGUAGES, REPORT_STATUSES, REPORT_THEMES } from "@/lib/reports";
+import { canSeeReport, EDITORIAL_ROLES, requireRole } from "@/lib/staff";
+import { listPeaks, listQueue, type QueueItem } from "@/lib/workflow";
 
 export const metadata: Metadata = { title: "File de rédaction — Laverta", description: "Dossiers de signalement à examiner par la rédaction Laverta." };
 
-const statusMessageKeys: Record<ReportStatus, MessageKey> = { new: "status.new", in_review: "status.inReview", referred: "status.referred", verified: "status.verified", closed: "status.closed" };
-const verdictMessageKeys: Record<NonNullable<ReportVerdict>, MessageKey> = { false: "verdict.false", true: "verdict.true", misleading: "verdict.misleading", unverifiable: "verdict.unverifiable" };
-const themeMessageKeys: Record<ReportTheme, MessageKey> = { education: "theme.education", agriculture: "theme.agriculture", health: "theme.health", economy: "theme.economy", politics: "theme.politics", safety: "theme.safety", other: "theme.other" };
+type Filters = { status?: string; theme?: string; region?: string; language?: string; channel?: string; mine?: string; error?: string };
 
-export default async function RedactionPage(props: { searchParams: Promise<{ error?: string; status?: string; theme?: string }> }) {
-  const locale: Locale = await getServerLocale();
-  const t = (key: MessageKey, values?: Record<string, string | number>) => translate(locale, key, values);
-  const searchParams = await props.searchParams;
-  if (!isAuthConfigured()) return <AccessMessage title={t("editorial.access")} detail={t("editorial.notConfigured")} t={t} />;
-
-  let session: Awaited<ReturnType<typeof getAuthSession>>;
-  try { session = await getAuthSession(); } catch { return <AccessMessage title={t("editorial.access")} detail={t("editorial.databaseOffline")} t={t} />; }
-  if (!session) redirect("/connexion?next=%2Fredaction");
-  if (!isEditorialSession(session)) return <AccessMessage title={t("editorial.reserved")} detail={t("editorial.accessDenied")} signedIn t={t} />;
-
-  let reports: ReportRow[];
-  try { reports = await listEditorialReports(); } catch { return <AccessMessage title={t("editorial.title")} detail={t("editorial.queueUnavailable")} signedIn t={t} />; }
-  const activeCount = reports.filter((report) => ["new", "in_review", "referred"].includes(report.status)).length;
-  const statusFilter = (REPORT_STATUSES as readonly string[]).includes(searchParams.status ?? "") ? searchParams.status as ReportStatus : "";
-  const themeFilter = (REPORT_THEMES as readonly string[]).includes(searchParams.theme ?? "") ? searchParams.theme as ReportTheme : "";
-  const visibleReports = reports.filter((report) => (!statusFilter || report.status === statusFilter) && (!themeFilter || report.theme === themeFilter));
-
-  return (
-    <main className="editorial-page">
-      <header className="editorial-header">
-        <BrandLockup label={t("nav.home")} />
-        <nav><Link href="/signaler">{t("editorial.publicForm")}</Link><Link href="/verification">{t("editorial.analysis")}</Link></nav>
-        <span className="editorial-header__user">{t("editorial.user", { email: session.user.email })}</span>
-      </header>
-      <section className="editorial-shell">
-        <div className="editorial-eyebrow">URBIX · {t("editorial.access")}</div>
-        <div className="editorial-title-row"><div><h1>{t("editorial.title")}</h1><p>{t("editorial.description")}</p></div><Link className="editorial-quiet-link" href="/suivi">{t("editorial.openTracking")} <ArrowRight size={14} /></Link></div>
-        <div className="editorial-metrics"><div><span>{t("editorial.activeCases")}</span><strong>{activeCount.toString().padStart(2, "0")}</strong></div><div><span>{t("editorial.totalActive")}</span><strong>{reports.length.toString().padStart(2, "0")}</strong></div><div><span>{t("editorial.rule")}</span><strong>{t("editorial.humanDecision")}</strong></div></div>
-        {searchParams.error === "missing" && <p className="editorial-alert">{t("editorial.caseMissing")}</p>}
-        <div className="editorial-list-heading"><h2>{t("editorial.recent")}</h2><span>{t("editorial.retention")}</span></div>
-        <form className="editorial-filters" method="get">
-          <label>{t("editorial.status")}<select name="status" defaultValue={statusFilter}><option value="">{t("editorial.allStatuses")}</option>{REPORT_STATUSES.map((status) => <option value={status} key={status}>{t(statusMessageKeys[status])}</option>)}</select></label>
-          <label>{t("editorial.theme")}<select name="theme" defaultValue={themeFilter}><option value="">{t("editorial.allThemes")}</option>{REPORT_THEMES.map((theme) => <option value={theme} key={theme}>{t(themeMessageKeys[theme])}</option>)}</select></label>
-          <button type="submit">{t("editorial.filter")}</button>
-          {(statusFilter || themeFilter) && <Link href="/redaction">{t("editorial.clearFilters")}</Link>}
-          <span>{t("editorial.caseCount", { count: visibleReports.length })}</span>
-        </form>
-        {visibleReports.length === 0 ? (
-          <div className="editorial-empty"><FileText size={22} /><h3>{reports.length === 0 ? t("editorial.empty") : t("editorial.noMatching")}</h3><p>{reports.length === 0 ? t("editorial.emptyText") : t("editorial.noMatchingText")}</p>{reports.length === 0 && <Link href="/signaler">{t("editorial.formLink")} <ArrowRight size={14} /></Link>}</div>
-        ) : (
-          <div className="editorial-report-list">
-            {visibleReports.map((report) => (
-              <Link className="editorial-report" href={`/redaction/dossiers/${report.id}`} key={report.id}>
-                <div className="editorial-report__meta"><span className={`report-status report-status--${report.status}`}>{t(statusMessageKeys[report.status])}</span><span>LV ···· {report.tracking_hint}</span><time dateTime={report.submitted_at.toISOString()}>{report.submitted_at.toLocaleDateString(locale === "mg" ? "mg-MG" : locale)}</time></div>
-                <h3>{report.assertion}</h3>
-                <div className="editorial-report__foot"><span>{t(themeMessageKeys[report.theme] ?? "theme.other")}</span><span>{report.media_mime_type ? t("editorial.imageAttached") : t("editorial.linkOrText")}</span>{report.verdict && <span>{t("editorial.verdict", { verdict: t(verdictMessageKeys[report.verdict]) })}</span>}<ArrowRight size={15} /></div>
-              </Link>
-            ))}
-          </div>
-        )}
-        <p className="editorial-footnote">{t("editorial.footnote")}</p>
-      </section>
-    </main>
-  );
+function matches(item: QueueItem, filters: Filters, email: string) {
+  // Sans statut choisi, la file ne montre que les dossiers ouverts.
+  if (filters.status ? item.status !== filters.status : ["verified", "closed"].includes(item.status)) return false;
+  if (filters.theme && item.theme !== filters.theme) return false;
+  if (filters.language && item.language !== filters.language) return false;
+  if (filters.channel && item.channel !== filters.channel) return false;
+  if (filters.region && !(item.region ?? "").toLowerCase().includes(filters.region.toLowerCase())) return false;
+  if (filters.mine === "1" && item.assigned_to !== email) return false;
+  return true;
 }
 
-function AccessMessage({ title, detail, signedIn = false, t }: { title: string; detail: string; signedIn?: boolean; t: (key: MessageKey) => string }) {
+export default async function RedactionPage(props: { searchParams: Promise<Filters> }) {
+  const locale = await getServerLocale();
+  const t = staffTranslator(locale);
+  const { member } = await requireRole(EDITORIAL_ROLES, "/redaction");
+  const filters = await props.searchParams;
+  const [queue, peaks] = await Promise.all([listQueue(), listPeaks()]);
+  const visible = queue.filter((item) => canSeeReport(member, item));
+  const shown = visible.filter((item) => matches(item, filters, member.email));
+  const active = visible.filter((item) => !["verified", "closed"].includes(item.status));
+  const dateFormat = new Intl.DateTimeFormat(locale === "mg" ? "fr" : locale, { dateStyle: "medium", timeStyle: "short" });
+
   return (
-    <main className="editorial-access"><BrandLockup label={t("nav.home")} /><div className="editorial-access__card"><span className="editorial-access__icon">{signedIn ? <FileText size={20} /> : <LogIn size={20} />}</span><div className="editorial-eyebrow">{t("editorial.access")}</div><h1>{title}</h1><p>{detail}</p>{!signedIn && <Link className="report-primary" href="/connexion?next=%2Fredaction">{t("editorial.login")} <ArrowRight size={15} /></Link>}<Link className="editorial-quiet-link" href="/">{t("editorial.backHome")} <ArrowRight size={14} /></Link></div></main>
+    <StaffShell member={member} t={t} active="/redaction" eyebrow={t(`role.${member.role}`)} title={t("queue.title")} intro={member.role === "journalist" && member.rubrics.length ? t("queue.introRubrics", { rubrics: member.rubrics.map((theme) => t(`theme.${theme}`)).join(", ") }) : t("queue.intro")}>
+      {filters.error === "missing" && <Notice tone="error">{t("queue.missing")}</Notice>}
+      {peaks.length > 0 && (
+        <section className="staff-alert" aria-label={t("queue.peaks")}>
+          <strong><AlertTriangle size={16} aria-hidden="true" /> {t("queue.peaks")}</strong>
+          {peaks.map((peak) => <Link key={peak.id} href={`/redaction/dossiers/${peak.id}`}>{t("queue.peakItem", { count: peak.recent, theme: t(`theme.${peak.theme}`) })} — « {peak.assertion.slice(0, 90)} »</Link>)}
+        </section>
+      )}
+      <div className="staff-metrics">
+        <div><span>{t("queue.active")}</span><strong>{active.length}</strong></div>
+        <div><span>{t("queue.new")}</span><strong>{active.filter((item) => item.status === "new").length}</strong></div>
+        <div><span>{t("queue.referred")}</span><strong>{active.filter((item) => item.status === "referred").length}</strong></div>
+        <div><span>{t("queue.mine")}</span><strong>{active.filter((item) => item.assigned_to === member.email).length}</strong></div>
+      </div>
+      <form className="staff-filters" method="get">
+        <label>{t("field.status")}<select name="status" defaultValue={filters.status ?? ""}><option value="">{t("queue.openOnly")}</option>{REPORT_STATUSES.map((status) => <option key={status} value={status}>{t(`status.${status}`)}</option>)}</select></label>
+        <label>{t("field.theme")}<select name="theme" defaultValue={filters.theme ?? ""}><option value="">{t("queue.all")}</option>{REPORT_THEMES.map((theme) => <option key={theme} value={theme}>{t(`theme.${theme}`)}</option>)}</select></label>
+        <label>{t("field.language")}<select name="language" defaultValue={filters.language ?? ""}><option value="">{t("queue.all")}</option>{REPORT_LANGUAGES.map((language) => <option key={language} value={language}>{language.toUpperCase()}</option>)}</select></label>
+        <label>{t("field.channel")}<select name="channel" defaultValue={filters.channel ?? ""}><option value="">{t("queue.all")}</option>{(["web", "messenger", "correspondent"] as const).map((channel) => <option key={channel} value={channel}>{t(`channel.${channel}`)}</option>)}</select></label>
+        <label>{t("field.region")}<input type="search" name="region" defaultValue={filters.region ?? ""} placeholder="Analamanga" /></label>
+        <label className="staff-checks"><span><input type="checkbox" name="mine" value="1" defaultChecked={filters.mine === "1"} /> {t("queue.onlyMine")}</span></label>
+        <button className="staff-btn" type="submit">{t("action.filter")}</button>
+        <Link className="staff-btn staff-btn--quiet" href="/redaction">{t("action.reset")}</Link>
+      </form>
+      <p className="staff-muted">{t("queue.count", { count: shown.length })} · {t("queue.sortRule")}</p>
+      {shown.length === 0 ? <div className="staff-empty">{t("queue.empty")}</div> : (
+        <div className="staff-list">
+          {shown.map((item) => (
+            <Link className="staff-item" key={item.id} href={`/redaction/dossiers/${item.id}`}>
+              <div className="staff-meta">
+                <span className="staff-tag staff-tag--strong">{t(`status.${item.status}`)}</span>
+                <span className="staff-tag">{t("queue.priority", { score: item.priority })}</span>
+                {item.size > 1 && <span className={`staff-tag${item.recent >= 5 ? " staff-tag--peak" : ""}`}><Users size={12} aria-hidden="true" /> {t("queue.similar", { count: item.size })}</span>}
+                <span>{t(`theme.${item.theme}`)}</span>
+                <span>{t(`channel.${item.channel}`)}</span>
+                {item.region && <span>{item.region}</span>}
+                <span>{item.language.toUpperCase()}</span>
+                {item.has_media && <ImageIcon size={13} aria-label={t("queue.image")} />}
+                <time dateTime={item.submitted_at.toISOString()}>{dateFormat.format(item.submitted_at)}</time>
+              </div>
+              <h3>{item.assertion}</h3>
+              <div className="staff-meta">
+                <span>{item.assigned_to ? t("queue.assigned", { email: item.assigned_to }) : t("queue.unassigned")}</span>
+                {item.referred_to && <span>{t("queue.referredTo", { org: item.referred_to, status: t(`org.${item.org_status ?? "pending"}`) })}</span>}
+                {item.verdict && <span>{t(`verdict.${item.verdict}`)}</span>}
+                <ArrowRight size={14} aria-hidden="true" />
+              </div>
+            </Link>
+          ))}
+        </div>
+      )}
+    </StaffShell>
   );
 }

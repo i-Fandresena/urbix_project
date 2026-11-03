@@ -51,8 +51,8 @@ export default async function ConnexionPage(props: { searchParams: Promise<{ con
       console.error("Better Auth could not validate the session against PostgreSQL.", code);
     }
   }
-  // A configuration error came from /verification; bouncing back there would loop forever.
-  if (authenticated && configuration === undefined) redirect("/verification");
+  // A configuration error came from a protected page; bouncing back there would loop forever.
+  if (authenticated && configuration === undefined) redirect("/espace");
 
   return (
     <main className="auth-page">
