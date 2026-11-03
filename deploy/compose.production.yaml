@@ -9,7 +9,9 @@ services:
     volumes:
       - /home/laverta/data/postgres:/var/lib/postgresql/data
     networks:
-      - internal
+      internal:
+        aliases:
+          - laverta-postgres
     mem_limit: 1g
     mem_reservation: 256m
     cpus: 0.5
@@ -32,7 +34,7 @@ services:
     command: ["npm", "run", "db:migrate:runtime"]
     environment: &laverta-environment
       NODE_ENV: production
-      DATABASE_URL: postgresql://laverta:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in /home/laverta/.env}@postgres:5432/laverta
+      DATABASE_URL: postgresql://laverta:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in /home/laverta/.env}@laverta-postgres:5432/laverta
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?Set BETTER_AUTH_SECRET in /home/laverta/.env}
       BETTER_AUTH_URL: ${BETTER_AUTH_URL:-https://laverta.aura-plus.site}
       BETTER_AUTH_TRUSTED_ORIGINS: ${BETTER_AUTH_TRUSTED_ORIGINS:-https://laverta.aura-plus.site}
