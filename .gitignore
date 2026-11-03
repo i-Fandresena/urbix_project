@@ -6,6 +6,9 @@ graphify-out/.graphify_python
 graphify-out/.graphify_root
 graphify-out/.graphify_build_state.json
 graphify-out/.graphify_labels.pending.json
+graphify-out/.graphify_chunk_*.json
+graphify-out/.graphify_learning.json
+graphify-out/reflections/
 graphify-out/20??-??-??/
 
 # Next.js app and packages
@@ -32,3 +35,4 @@ Hackathon_Besoins.mp4
 
 # Local visual review capture
 hamarino-preview.png
+docs/hamarino-desktop.png

@@ -14,7 +14,7 @@ async function sendAuthEmail(to: string, subject: string, text: string) {
 }
 
 export const auth = betterAuth({
-  appName: "Hamarino",
+  appName: "Laverta",
   baseURL: process.env.BETTER_AUTH_URL ?? "http://localhost:3000",
   secret: process.env.BETTER_AUTH_SECRET ?? "local-build-only-secret-change-before-use-000000000000",
   trustedOrigins: trustedOrigins(),
@@ -32,7 +32,7 @@ export const auth = betterAuth({
       sendResetPassword: async ({ user, url }: { user: { email: string }; url: string }) => {
         await sendAuthEmail(
           user.email,
-          "Réinitialiser votre mot de passe Hamarino",
+          "Réinitialiser votre mot de passe Laverta",
           `Pour choisir un nouveau mot de passe, ouvrez ce lien : ${url}\n\nSi vous n’avez pas demandé cette réinitialisation, ignorez ce message.`,
         );
       },
@@ -50,8 +50,8 @@ export const auth = betterAuth({
       sendVerificationEmail: async ({ user, url }: { user: { email: string }; url: string }) => {
         await sendAuthEmail(
           user.email,
-          "Confirmez votre adresse pour Hamarino",
-          `Pour confirmer votre adresse e-mail, ouvrez ce lien : ${url}\n\nSi vous n’avez pas créé de compte Hamarino, ignorez ce message.`,
+          "Confirmez votre adresse pour Laverta",
+          `Pour confirmer votre adresse e-mail, ouvrez ce lien : ${url}\n\nSi vous n’avez pas créé de compte Laverta, ignorez ce message.`,
         );
       },
     },

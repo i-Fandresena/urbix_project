@@ -1,112 +1,107 @@
-# Produit — Hamarino by Urbix
+# Produit — Laverta par Urbix
 
-## 1. Problème et public
+## 1. Vision
 
-Les journalistes à Madagascar reçoivent des photos et vidéos dont le lieu, la date ou la légende sont incertains. Le besoin documenté est d’aider à authentifier le contexte et de trouver des pistes de vérification, dans un environnement où les sources locales et les conditions d’accès varient.
+**Signature :** « La correction doit suivre la rumeur. »
+**Promesse :** « Détecter plus tôt. Vérifier plus vite. Corriger plus loin. »
 
-**Public primaire :** journaliste, rédacteur ou fact-checker qui doit décider quoi recouper avant de publier.
+Laverta relie signalements, travail de vérification journalistique et diffusion de corrections auprès des personnes et communautés concernées. L’IA trie et prépare ; un journaliste examine les sources, décide du verdict et valide le message public.
 
-**Promesse :** « Donnez une image et ce que vous en savez. Hamarino rassemble des indices et des sources consultables pour guider la vérification humaine. »
+Le périmètre cible complet se trouve dans LAVERTA_STRATEGIE.md. Les exigences communiquées par l’équipe ne sont pas toutes implémentées.
 
-**Ce que le produit ne prétend pas faire :** certifier automatiquement qu’une image est vraie, détecter avec fiabilité un montage, établir seul une date ou une localisation, ni remplacer une source locale.
+## 2. Problème, publics et valeur
 
-## 2. Parcours MVP
+Les rédactions reçoivent des rumeurs et médias dont l’origine, la date ou le contexte sont incertains. Une vérification prend du temps, et une correction publiée sur le seul canal du média ne rejoint pas nécessairement les personnes qui ont vu la rumeur.
 
-1. Le journaliste choisit une image JPEG, PNG ou WebP, jusqu’à 8 Mo.
-2. Il saisit l’affirmation à vérifier et un contexte optionnel (source, date, lieu, lien).
-3. Avant l’envoi, il confirme que le fichier sera transmis à Gemini pour l’analyse.
-4. Le serveur vérifie le format réel, limite les dimensions et réencode l’image en mémoire afin de retirer les métadonnées EXIF et de réduire le poids.
-5. Gemini 2.5 Flash examine les éléments visuels, utilise Google Search pour le recoupement, puis retourne un objet structuré. L’appel désactive le stockage d’interaction (`store: false`).
-6. Hamarino présente séparément observations visuelles, contexte, niveau de convergence, limites, étapes suivantes et liens de citations retournés par Google Search.
-7. Le journaliste ouvre les sources, réalise les vérifications proposées et copie une note partageable.
+Publics prévus :
 
-Un exemple d’interface est disponible sans clé Gemini. Il est **simulé**, ne cite aucune source et ne doit jamais être présenté au jury comme un fait vérifié.
+- personnes qui signalent une information ou consultent son suivi ;
+- journalistes, correspondants et rédacteurs en chef qui priorisent et vérifient les dossiers ;
+- organismes officiels qui répondent uniquement aux dossiers qui leur sont transmis ;
+- relais locaux et rédactions partenaires qui partagent les corrections validées.
 
-Le parcours d’accès démarre sur la landing `/`, puis mène à `/connexion` (création ou connexion Better Auth) avant l’espace `/verification`. Les comptes et sessions sont conservés dans PostgreSQL. La landing comporte une prévisualisation mobile et un emplacement de téléchargement. L’APK n’est pas publiable tant qu’une URL publique n’est pas disponible : l’application Android doit joindre le serveur Next.js pour authentifier l’utilisateur et appeler Gemini sans embarquer la clé.
+Le différenciateur est la boucle de retour : code de suivi, dossier éditorial, verdict sourcé, correction et canal de diffusion vers les signaleurs. La confiance dépend de la provenance, de la confidentialité et de la validation humaine.
 
-## 3. États et règles éditoriales
+## 3. État du prototype et limites exactes
 
-- `supported` : une ou plusieurs sources citées étayent directement l’affirmation.
-- `contradicted` : une ou plusieurs sources citées contredisent directement l’affirmation.
-- `unverified` : source absente, faible, indirecte, contradictoire ou recherche infructueuse.
-- `high`, `medium`, `low`, `insufficient` : appréciation qualitative de la convergence. Ce n’est pas un score de vérité ni une probabilité statistique.
-- Si aucune citation URL de recherche n’est retournée par l’API, le serveur force le statut `unverified`, la confiance `insufficient` et l’affichage d’une limite explicite.
-- Ne jamais afficher un lien écrit librement par le modèle comme une source. L’interface affiche uniquement les URL portées par les annotations de citation de la réponse Gemini.
-- Toute décision de publication reste humaine.
+**Implémenté dans web/** : identité et landing Laverta avec le logo et la mascotte choisis par l’équipe dans `DA/`, formulaire public sans compte avec récapitulatif, choix du thème/langue, affirmation, image ou lien, code de suivi aléatoire, suivi public par code, effacement par code, file journalistique protégée par une liste d’adresses autorisées, fiche dossier, statuts, verdict humain, justification, correction sourcée et page publique de correction. Les images jointes sont conservées originales, chiffrées AES-256-GCM dans PostgreSQL et accessibles seulement à la rédaction autorisée ; leur empreinte SHA-256 est contrôlée lors du déchiffrement. Les dossiers expirent après 30 jours.
 
-## 4. Architecture actuelle
+Le prototype conserve aussi l’espace protégé d’analyse d’image avec transmission à Gemini côté serveur après consentement, recherche Google et citations disponibles. Ce parcours reste séparé : les images reçues par le formulaire de signalement ne sont pas envoyées à Gemini.
 
-- `web/` : Next.js App Router, TypeScript, React, CSS global responsive.
-- `web/src/app/page.tsx` : landing publique et présentation du produit.
-- `web/src/app/connexion/` : création de compte, connexion et demande de réinitialisation.
-- `web/src/app/verification/` : interface et état local du formulaire/résultat.
-- `web/src/proxy.ts` : redirections optimistes vers la connexion ; les routes protégées valident aussi la session côté serveur.
-- `web/src/lib/auth.ts` : Better Auth, pool PostgreSQL et e-mails SMTP facultatifs.
-- `web/src/app/api/auth/[...all]/route.ts` : endpoints Better Auth.
-- `web/src/app/api/analyze/route.ts` : route serveur d’analyse, Gemini Interactions API et recherche Google.
-- `web/src/app/api/messenger/webhook/route.ts`, `web/src/lib/messenger-flow.ts` et `web/src/lib/signalements.ts` : bot Messenger de la Page Laverta, qui recueille des signalements texte sans appeler Gemini.
-- Better Auth avec PostgreSQL (`pg`) : comptes e-mail/mot de passe, mots de passe hachés et sessions par cookies ; SMTP est facultatif pour la confirmation et la récupération par e-mail.
-- `@google/genai` : SDK officiel Gemini.
-- `sharp` : lecture réelle du format, normalisation et retrait des métadonnées par réencodage en mémoire.
-- `geist` : polices auto-hébergées, sans requête externe pour les polices.
-- `lucide-react` : pictogrammes fonctionnels.
-- Aucun dossier de vérification, stockage d’image, suivi analytique ou journal de recherches n’est installé. PostgreSQL conserve les données minimales de compte, les mots de passe hachés et les sessions. Pour le bot Messenger, il conserve aussi le texte des signalements confirmés, les brouillons de moins de 24 heures et la langue choisie par chaque contact.
+La landing et les principaux parcours web ont un choix de langue français/malgache/anglais, mémorisé entre les routes ; le français reste la langue initiale. Le bureau Gemini demande une réponse dans la langue sélectionnée. Un contrôle global active le thème sombre, tandis que le thème clair reste le choix par défaut. Les libellés malgaches sont provisoires et exigent une relecture native.
 
-## 5. Sécurité et confidentialité du MVP
+Un bot Messenger de prototype (`web/src/app/api/messenger/webhook/route.ts`, `web/src/lib/messenger-flow.ts`, `web/src/lib/messenger-messages.ts` et `web/src/lib/signalements.ts`) recueille des signalements texte en français, malgache et anglais. Il n’appelle pas Gemini et ne conserve ni photo ni fichier. Ses signalements sont stockés dans la table `signalement`, séparée de `laverta_reports` : ils n’apparaissent pas encore dans la file rédaction et se récupèrent par export CSV. Ses codes de suivi courts ne fonctionnent que dans Messenger, pour le compte qui a signalé.
 
-- La variable `GEMINI_API_KEY` est utilisée exclusivement dans la route serveur. Aucun préfixe `NEXT_PUBLIC_`.
-- La clé publiée dans la conversation doit être révoquée/rotée. Ne pas la remettre dans le dépôt, le README, un fichier d’équipe, un ticket ou une conversation. Créer une clé d’autorisation neuve dans Google AI Studio et la saisir localement dans `web/.env.local`.
-- Le fichier n’est jamais écrit sur disque par l’application : il est reçu et normalisé en mémoire, puis transmis à l’API Gemini après consentement.
-- Le projet Gemini doit rester au forfait **Free**, sans compte de facturation associé. L’application n’a aucun basculement payant. Google publie 500 requêtes Google Search par jour au forfait gratuit (quota partagé avec Flash-Lite) ; les limites peuvent changer et une demande peut être refusée une fois une limite atteinte.
-- La base PostgreSQL doit être fournie par l’équipe, en local ou chez un hébergeur choisi sans dépasser le budget. `DATABASE_URL` et `BETTER_AUTH_SECRET` restent des secrets serveur. Le conteneur Compose fourni est réservé au développement local.
-- Les pages de connexion et d’inscription utilisent Better Auth. Le proxy ne fait qu’une redirection optimiste ; la page `/verification` et la route d’analyse revalident la session côté serveur avant tout accès. La clé Gemini reste exclusivement côté serveur.
-- Aucun service d’e-mail n’est requis pour créer un compte et se connecter. La confirmation d’adresse et la récupération du mot de passe sont activées seulement lorsque des paramètres SMTP sont fournis ; tester l’envoi avant de l’exiger en production.
-- Les conditions du forfait gratuit autorisent Google à utiliser prompts et réponses pour améliorer ses produits. Le consentement de l’interface l’indique ; réserver la démo à des images autorisées, publiques et non sensibles.
-- L’appel Interactions utilise `store: false` pour ne pas conserver la requête/réponse dans l’historique des interactions Google. Cela ne change pas les conditions d’utilisation des données du forfait gratuit.
-- La suppression EXIF élimine des métadonnées utiles comme coordonnées et date ; Hamarino ne sert donc pas de chaîne de conservation de preuve. Conserver le fichier original dans un système rédactionnel maîtrisé si l’enquête l’exige.
-- Les images, le prompt et l’affirmation sont des données non fiables. Les éventuelles instructions visibles dans l’image ne doivent pas modifier la politique du modèle.
-- Limite de taille : 8 Mo. Formats réels acceptés : JPEG, PNG, WebP. Dimensions plafonnées à 25 mégapixels en entrée, puis 1800 px max avant envoi.
-- Le MVP n’a pas encore de limitation distribuée de requêtes, de dossiers par utilisateur, ni de journal d’audit. Avant un déploiement public, Claude doit proposer une limitation d’abus placée à la frontière de confiance réelle, une règle de rétention côté fournisseur et une revue de la configuration de production.
-- Vérifier les conditions de l’API Google applicables aux images et prompts avant d’utiliser des contenus sensibles ou confidentiels. Le consentement dans l’interface ne remplace pas la validation éditoriale/juridique.
+Next.js est configuré avec `cacheComponents: true`. Le layout racine reste statique ; les pages qui lisent le cookie de langue sont placées sous une frontière `Suspense` avec un état de chargement statique. Le fournisseur client initialise les préférences depuis les cookies après hydratation.
 
-## 6. Hors périmètre aujourd’hui
+La page `/connexion` vérifie la session côté serveur. Si PostgreSQL rejette ou interrompt la connexion, elle affiche une erreur localisée et désactive la connexion et la création de compte ; les identifiants `DATABASE_URL` doivent correspondre au serveur PostgreSQL actif.
 
-- Vérification complète de vidéo ou extraction automatique de séquences.
-- Recherche inversée d’image dédiée, provenance cryptographique ou analyse médico-légale de manipulation.
-- Annuaire vérifié d’experts, contacts publics, statistiques actualisées et veille régionale.
-- APK Android signé, publication du fichier et hébergement public du binaire ; la conception landing/mobile existe mais nécessite une URL de serveur public avant de construire une version distribuable.
-- Mode hors-ligne/satellite et upload reprenable sur réseau intermittent.
-- Publication d’une interface malgache ou anglaise sans relecture humaine.
-- Gestion de dossiers, collaboration rédactionnelle, hébergement d’images ou rétention de preuves.
+La route `/` reprend et adapte le héros visuel et l’ordre éditorial de godseyeview.ai : en-tête sombre, composition centrée, globe cartographique, éléments de confiance, fonctionnalités, parcours d’accès, bandeau de partage, transparence, espaces, FAQ et appel final. Le globe utilise les frontières pays Natural Earth 10m ; il commence orienté sur Madagascar, effectue un tour complet et revient sur Madagascar avant une courte pause. Deux satellites stylisés orbitent autour du globe et les lumières changent de couleur. Ces éléments sont illustratifs et ne représentent pas des satellites suivis ni des signalements en direct. Le jeu de données et sa provenance figurent dans `web/public/geo/README.md`. Le catalogue YouTube est omis. Les chiffres et témoignages de la référence ne sont pas transposés ; le texte Laverta décrit seulement le prototype disponible. L’ancienne landing est conservée sur `/landing-editoriale`. Aucun logo, asset applicatif, capture ou script de God’s Eye View n’est embarqué. La licence MIT couvre le code source du dépôt, pas automatiquement ses assets tiers.
 
-## 7. Évolutions qui créent de la valeur
+Le dépôt local `God's_Eye/` est l’application globe Vue/Cesium et ne contient pas le code source du hero marketing. Le site public utilise un canvas `#earth` animé par `/assets/globe.js`; Laverta reprend la disposition avec un canvas local qui projette les frontières Natural Earth sur un globe, sans transférer le script distant.
 
-1. **Piste source exploitable :** chaque résultat relie une affirmation à une source consultable et une prochaine action (contact local, recherche de version antérieure, comparaison d’éléments visibles).
-2. **Mode faible débit :** interface légère, redimensionnement local facultatif avant upload, reprise réseau et fiche texte sans images persistées. À concevoir sans promettre de recherche hors-ligne.
-3. **Chronologie des apparitions :** intégrer une recherche inversée autorisée ou un catalogue de publications, conserver les URL et dates de première observation avec une preuve d’origine.
-4. **Carte des sources à Madagascar :** répertoire maintenu et validé par journalistes, avec date de vérification, domaine, région et contact public.
-5. **Passerelle image depuis vidéo :** extraction de quelques images clés, puis le même processus de source et de contexte.
-6. **Rapport de vérification exportable :** conserver les citations, date de recherche, texte envoyé, limites et interventions du journaliste, avec politique de confidentialité explicite.
+Le logo horizontal, son symbole d’application et la mascotte viennent des fichiers fournis dans `DA/`. Les versions transparentes utilisées par le site sont servies depuis `web/public/brand/`. La mascotte est une illustration de marque, pas une représentation de verdict ou d’analyse autonome.
 
-Ces extensions ne doivent entrer dans le pitch MVP que si elles sont réellement prototypées ou clairement nommées comme feuille de route.
+**Limites actuelles** : aucune identité ou coordonnée de retour n’est collectée ; les corrections sont consultables par code, sans alertes. La file utilise une liste locale d’adresses autorisées, pas encore des rôles métier complets. Les propositions IA, le regroupement de doublons, les réponses d’organismes, l’arrivée des signalements Messenger dans la file rédaction, OCR, transcription, recherche inversée, carte, alertes, statistiques et diffusion réseau ne sont pas encore implémentés. La liste complète est dans LAVERTA_STRATEGIE.md.
 
-## 8. Récit de démonstration (2 minutes)
+Le mode sans clé est une simulation et doit le rester clairement. Aucune source ni statistique d’exercice ne doit apparaître comme réelle. La recherche web n’est pas une recherche inversée d’image et l’analyse de Gemini n’est ni une preuve médico-légale ni un verdict.
 
-1. Ouvrir la vérification d’image et présenter une affirmation plausible avec une image d’exercice autorisée.
-2. Montrer les éléments de contexte que le journaliste connaît déjà et le consentement d’envoi.
-3. Lancer Gemini et observer séparément ce que l’image montre et ce que les sources corroborent.
-4. Ouvrir une citation de recherche et montrer les limites / vérifications suivantes.
-5. Conclure : « Hamarino n’ajoute pas un verdict de plus au bruit : il rend le recoupement visible, sourçable et réutilisable par le journaliste. »
+## 4. Tranche verticale recommandée pour le concours
 
-La démo réelle doit utiliser une clé de remplacement neuve, une image dont l’équipe a les droits, un cas non sensible et des liens vérifiés à l’avance. Si l’API est indisponible, utiliser l’exemple simulé en disant explicitement qu’aucune source réelle n’a été recherchée.
+La première tranche de cette boucle est maintenant implémentée :
 
-## 9. Décisions attendues de l’équipe avant le pitch
+1. Formulaire web sans compte obligatoire, avec consentement, affirmation, thème et un média d’exercice.
+2. Résumé confirmé et création d’un code LV de suivi.
+3. File journaliste protégée et fiche dossier avec statut.
+4. Verdict manuel, justification et sources saisies par la rédaction.
+5. Correction publique disponible par code après passage au statut « Vérifié ».
+6. Effacement du dossier et de ses médias avec le code de suivi.
 
-- Obtenir le règlement IFM spécifique, le format de démo, la durée et l’échéance.
-- Valider le nom et le sens exact de « Hamarino » avec un locuteur malgache natif.
-- Choisir une image de démonstration avec licence/autorisation et un fait qui se recoupe dans des sources ouvertes.
-- Préparer une nouvelle clé Gemini dans un projet dont le statut reste **Free**, sans compte de facturation lié, surveiller les quotas gratuits et ne pas partager la clé dans le chat.
-- Démarrer PostgreSQL en local ou créer une base PostgreSQL accessible au serveur, renseigner les variables locales, lancer `npm run db:migrate`, puis créer un premier compte avant la démo.
-- Choisir une URL publique pour héberger Next.js ; elle est nécessaire à l’APK Android et aux liens d’e-mail si SMTP est configuré. Préparer ensuite la signature Android et le lien de téléchargement.
-- Faire relire les termes de consentement et les langues par l’équipe éditoriale.
-- Demander à Claude Code la revue sécurité, la mise en mouvement Framer Motion et l’amélioration UX décrites dans `CLAUDE.md`.
+La prochaine tranche recommandée est l’assistance IA modifiable (affirmation candidate, thème, résumé, doublons et pistes), avec provenance et limites visibles. La rédaction garde la décision et la publication.
+
+Les messageries, SMS, USSD, intégrations officielles, cartes et alertes restent une feuille de route tant qu’elles ne sont pas testées avec de vrais comptes et conditions. Les maquettes doivent être étiquetées « concept ».
+
+## 5. Parcours et statuts
+
+Signalant : choisir la langue et l’intention → décrire la rumeur → joindre un média autorisé → relire le résumé → consentir et envoyer → conserver le code → consulter le suivi → recevoir une correction si un canal de retour a été demandé.
+
+Journaliste : ouvrir la file → examiner thème/région/langue/priorité → valider ou corriger l’analyse → consulter les sources → contacter un organisme si nécessaire → choisir un verdict et le justifier → approuver la correction → choisir les canaux → clôturer.
+
+Statuts demandés : nouveau, en vérification, transmis, vérifié, clos. Les verdicts sont séparés des statuts : faux, vrai, trompeur, non vérifiable. L’absence de source ne constitue pas un verdict de fausseté.
+
+Organisme : accès sur invitation aux seuls dossiers transmis et anonymisés → réponse officielle et pièces autorisées → suivi des délais. Relances avant échéance selon une règle visible ; aucune relance automatique ne doit exposer des informations additionnelles.
+
+## 6. Architecture actuelle et destination
+
+**Application actuelle** : Next.js App Router, TypeScript, React, Better Auth, PostgreSQL via pg, SDK Google GenAI côté serveur, Sharp pour le traitement en mémoire de l’image, Motion for React pour les transitions UI et Lottie pour un symbole animé local. Le SMTP est facultatif. Les polices Plus Jakarta Sans et Bebas Neue sont servies depuis `web/public/fonts/`.
+
+**Composants métier présents** : table `laverta_reports` pour le signalement, les médias chiffrés, l’état éditorial et la correction ; table `laverta_report_audit` pour les changements de statut et de verdict. L’identité de retour n’est pas collectée. La rédaction est autorisée via `LAVERTA_EDITOR_EMAILS` et une session Better Auth vérifiée en production.
+
+Politique du prototype : image originale conservée sans réencodage dans PostgreSQL, chiffrée en AES-256-GCM avec `LAVERTA_MEDIA_ENCRYPTION_KEY`, empreinte SHA-256, accès à l’image réservé à la rédaction, expiration à 30 jours, effacement à la demande par code. Le serveur actif effectue une purge périodique et les routes purgent aussi à l’accès ; les hébergements serverless peuvent suspendre les minuteries, donc prévoir un ordonnanceur de purge avant ouverture publique. Une clé perdue rend les médias irrécupérables ; sa sauvegarde séparée et sa rotation planifiée sont nécessaires. Le chiffrement applicatif ne remplace pas le chiffrement du disque et des sauvegardes.
+
+## 7. Politique IA et sécurité
+
+- Aucune clé Gemini dans le navigateur, dans l’APK, Git ou un chat. Une clé partagée précédemment est compromise : seule une clé neuve peut être créée localement dans web/.env.local, ignoré par Git.
+- Garder le projet Google au forfait gratuit sans compte de facturation, sans fallback payant. Revalider les limites et les conditions au moment de la démo ; quota atteint signifie attente ou erreur explicite.
+- N’envoyer au fournisseur que les médias autorisés et non sensibles après consentement. Les conditions du forfait gratuit peuvent permettre l’utilisation des prompts/réponses pour l’amélioration des services ; ne pas traiter des sources confidentielles sans décision appropriée.
+- Conserver la session Better Auth vérifiée côté serveur pour les routes privées. La clé reste sur le serveur Next.js.
+- Les résultats IA et le rapprochement ne sont jamais un verdict. Chaque source est consultable et les affirmations doivent pouvoir être corrigées par un journaliste.
+- Aucun compte ni contact n’est demandé au signaleur ; « sans compte » ne veut pas dire anonymat réseau garanti. L’hébergement peut conserver des journaux réseau.
+- Le code de suivi contient 80 bits aléatoires ; seule son empreinte SHA-256 et son suffixe sont conservés. Un limiteur en mémoire et un champ honeypot freinent les abus locaux ; une ouverture publique demande un limiteur partagé et une revue de l’infrastructure.
+- L’effacement avec le code supprime aussi les événements d’audit associés. Les dossiers sont purgés au prochain accès quand leur rétention de 30 jours est passée.
+
+## 8. Canaux et dépendances
+
+Le formulaire web est le premier canal à réaliser. Le partage mobile peut commencer par une page web adaptée ; l’APK nécessite une URL serveur publique et une signature. Messenger, WhatsApp Business et Meta demandent configuration et autorisations officielles. SMS et USSD dépendent d’un opérateur ou agrégateur et peuvent engendrer des frais. Les extensions de navigateur et recherches inversées dépendent de politiques de navigateur, d’accès aux API, de licences, de quotas et parfois de paiements.
+
+L’équipe a un budget de zéro : ne pas implémenter de dépendance qui débite un compte, ne pas ajouter de fallback payant et ne pas promettre qu’une API externe est gratuite sans vérification.
+
+## 9. Démonstration et mesure
+
+Démo recommandée : envoyer un signalement d’exercice avec une image publique ou autorisée, conserver le code remis, ouvrir la file journaliste avec un compte figurant dans `LAVERTA_EDITOR_EMAILS`, examiner l’image, ajouter des sources réellement consultables, justifier un verdict, publier une correction et la retrouver par code. Marquer clairement le cas d’exercice. Aucun message n’est envoyé au signaleur ; il consulte manuellement la correction sur la page de suivi.
+
+Indicateurs à définir avec leurs dates et dénominateurs : délai premier signalement → verdict, délai → correction, proportion de rumeurs déjà documentées, réponse des organismes, retours délivrés par canal. La portée de correction est un objectif du PDF ; ne pas la présenter comme mesurée sans méthode.
+
+## 10. Décisions à obtenir
+
+Règlement IFM et deadline ; validation du flux par un journaliste ; régions et thèmes du scénario ; relecture native du malgache ; hébergement ; règles de conservation et effacement ; sources officielles disponibles ; accès API et coûts des canaux ; procédure pour traiter les dossiers sensibles.

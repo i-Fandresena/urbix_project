@@ -1,38 +1,39 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
+import { getServerLocale } from "@/lib/i18n/server";
+import { translate, type MessageKey } from "@/lib/i18n/messages";
+import { BrandLockup } from "@/app/brand-lockup";
 
 export const metadata: Metadata = {
-  title: "Données et confidentialité — Hamarino",
-  description: "Comment Hamarino traite les données de compte et les images envoyées pour analyse.",
+  title: "Données et confidentialité — Laverta",
+  description: "Comment Laverta traite les données de signalement, de compte et les images.",
 };
 
-function Brand() {
-  return (
-    <Link className="brand-lockup" href="/" aria-label="Hamarino, accueil">
-      <span className="brand-lockup__mark" aria-hidden="true"><svg viewBox="0 0 36 36" fill="none"><path d="M4 12V4h8M24 4h8v8M32 24v8h-8M12 32H4v-8" /><circle cx="14.5" cy="18" r="2.4" /><path d="M17 18h7.2" /><circle cx="27.2" cy="18" r="1.8" /></svg></span>
-      <span className="brand-lockup__word">hamarino<span>.</span></span>
-    </Link>
-  );
+function Brand({ label }: { label: string }) {
+  return <BrandLockup label={label} />;
 }
 
-export default function PrivacyPage() {
+export default async function PrivacyPage() {
+  const locale = await getServerLocale();
+  const t = (key: MessageKey) => translate(locale, key);
   return (
     <main className="policy-page">
-      <header><Brand /><Link className="policy-back" href="/"><ArrowLeft size={14} /> Retour à l’accueil</Link></header>
+      <header><Brand label={t("nav.home")} /><Link className="policy-back" href="/"><ArrowLeft size={14} /> {t("auth.backHome")}</Link></header>
       <article className="policy-content">
-        <div className="eyebrow"><span className="eyebrow__rule" /> HAMARINO BY URBIX · INFORMATIONS</div>
-        <h1>Données et confidentialité</h1>
-        <p className="policy-lede">Hamarino aide une rédaction à examiner le contexte d’une image. Cette page résume les données utilisées dans le prototype actuel.</p>
+        <div className="eyebrow"><span className="eyebrow__rule" /> LAVERTA · URBIX</div>
+        <h1>{t("privacy.title")}</h1>
+        <p className="policy-lede">{t("privacy.lede")}</p>
 
-        <section><span>01</span><div><h2>Votre compte</h2><p>La création de compte transmet votre adresse e-mail, votre nom et, si vous l’indiquez, votre rédaction au serveur Hamarino. Better Auth traite les identifiants et conserve dans PostgreSQL le compte, un condensat du mot de passe, les sessions et les limites temporaires de connexion. Le mot de passe n’est pas enregistré en clair. Si un serveur SMTP est configuré, il sert à confirmer l’adresse et à envoyer les liens de récupération.</p></div></section>
-        <section><span>02</span><div><h2>Images et analyses</h2><p>Une image et le contexte saisi sont transmis à Gemini uniquement après votre consentement explicite. Le serveur Hamarino les traite en mémoire, retire les métadonnées EXIF et ne les enregistre pas dans une base de données. L’appel désactive l’historique des interactions avec <code>store: false</code>.</p><p>Le forfait Gemini gratuit peut utiliser les prompts et les réponses pour améliorer les produits Google. N’envoyez pas d’images confidentielles, sensibles ou dont vous n’avez pas le droit d’usage.</p></div></section>
-        <section><span>03</span><div><h2>Signalements via Messenger</h2><p>Le bot Messenger enregistre dans PostgreSQL le texte d’un signalement confirmé, son thème, le lieu de diffusion et la ville ou région indiqués, la date, le statut, la langue choisie, un code de suivi et l’identifiant Messenger propre à la Page, qui sert à répondre et à suivre le signalement. Les photos et fichiers envoyés ne sont ni téléchargés ni conservés : seul leur nombre est noté. Un brouillon non confirmé est effacé après 24 heures ; la langue choisie reste associée à l’identifiant Messenger pour les échanges suivants.</p><p>Les signalements ne sont pas transmis à Gemini. L’export utilisé par l’équipe ne contient pas l’identifiant Messenger. La durée de conservation des signalements doit être fixée par l’équipe avant toute ouverture publique.</p></div></section>
-        <section><span>04</span><div><h2>Ce que Hamarino ne conserve pas</h2><p>En dehors des signalements Messenger, ce prototype n’enregistre pas d’images, de dossiers d’enquête, de résultats, ni d’historique de recherches. Il n’intègre pas de service d’analyse d’audience.</p></div></section>
-        <section><span>05</span><div><h2>Services externes</h2><p>La base PostgreSQL est celle configurée par l’équipe. Google traite les données envoyées à Gemini selon ses propres conditions et politiques. Meta traite les messages échangés sur Messenger selon ses propres conditions. Si l’équipe configure un serveur SMTP, celui-ci reçoit l’adresse e-mail et les messages de compte. La désactivation de l’historique Gemini ne remplace pas les règles du forfait gratuit Google.</p></div></section>
+        <section><span>01</span><div><h2>{t("privacy.section1")}</h2><p>{t("privacy.section1Text")}</p></div></section>
+        <section><span>02</span><div><h2>{t("privacy.section2")}</h2><p>{t("privacy.section2Text")}</p></div></section>
+        <section><span>03</span><div><h2>{t("privacy.section3")}</h2><p>{t("privacy.section3Text")}</p></div></section>
+        <section><span>04</span><div><h2>{t("privacy.section4")}</h2><p>{t("privacy.section4Text")}</p></div></section>
+        <section><span>05</span><div><h2>{t("privacy.section5")}</h2><p>{t("privacy.section5Text")}</p></div></section>
+        <section><span>06</span><div><h2>{t("privacy.section6")}</h2><p>{t("privacy.section6Text")}</p></div></section>
 
-        <div className="policy-note"><strong>Pour la démonstration</strong><p>Utilisez une image publique ou autorisée, non sensible, et un cas d’exercice. Les résultats sont des pistes de travail : la décision éditoriale reste humaine.</p></div>
-        <p className="policy-footnote">Version prototype · 2 novembre 2026. Une politique adaptée à une ouverture publique devra être validée par l’équipe avant publication.</p>
+        <div className="policy-note"><strong>{t("privacy.demoTitle")}</strong><p>{t("privacy.demoText")}</p></div>
+        <p className="policy-footnote">{t("privacy.versionNote")}</p>
       </article>
     </main>
   );

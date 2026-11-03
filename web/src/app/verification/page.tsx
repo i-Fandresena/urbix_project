@@ -5,7 +5,7 @@ import { getAuthSession } from "@/lib/auth";
 import { isAuthConfigured } from "@/lib/auth-config";
 
 export const metadata: Metadata = {
-  title: "Vérification visuelle — Hamarino",
+  title: "Vérification visuelle — Laverta",
   description: "Espace éditorial de vérification visuelle et de recoupement des sources.",
 };
 
