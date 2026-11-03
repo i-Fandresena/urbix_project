@@ -72,6 +72,11 @@ sync_source() {
   git -C "$APP_ROOT" checkout --quiet --detach "$commit_sha"
 }
 
+assert_source_is_current() {
+  git -C "$APP_ROOT" fetch --quiet --no-tags origin prototype
+  [[ "$(git -C "$APP_ROOT" rev-parse FETCH_HEAD)" == "$commit_sha" ]] || fail "prototype advanced while the image was transferring; refusing to deploy a stale commit"
+}
+
 compose() {
   local tag=${COMPOSE_IMAGE_TAG:-$commit_sha}
   IMAGE_TAG="$tag" docker compose --project-directory "$APP_ROOT" --project-name laverta --env-file "$ENV_FILE" --file "$compose_file" "$@"
@@ -80,7 +85,7 @@ compose() {
 wait_for_postgres() {
   local attempt
   for attempt in $(seq 1 40); do
-    if compose exec -T postgres pg_isready -U laverta -d laverta >/dev/null 2>&1; then
+    if compose exec -T postgres psql -U laverta -d laverta -Atqc 'SELECT 1' >/dev/null 2>&1; then
       return 0
     fi
     sleep 3
@@ -141,8 +146,19 @@ flock -n 9 || fail "another Laverta deployment is already running"
 resource_preflight
 sync_source
 
+# Refresh this root-owned entrypoint from the exact checked-out commit. Re-exec
+# before consuming the image stream so deploy-script changes take effect on the
+# same push; release the lock descriptor before restarting the updated script.
+if ! cmp -s "${APP_ROOT}/deploy/server-deploy.sh" /usr/local/sbin/laverta-deploy; then
+  install -o root -g root -m 755 "${APP_ROOT}/deploy/server-deploy.sh" /usr/local/sbin/laverta-deploy
+  flock -u 9
+  exec 9>&-
+  exec /usr/local/sbin/laverta-deploy "$@"
+fi
+
 gzip -dc | docker load >/dev/null
 docker image inspect "laverta:${commit_sha}" >/dev/null 2>&1 || fail "the transferred image does not contain laverta:${commit_sha}"
+assert_source_is_current
 
 unset COMPOSE_IMAGE_TAG || true
 compose up -d --no-build postgres

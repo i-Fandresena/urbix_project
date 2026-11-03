@@ -48,9 +48,9 @@
     "semantic_hash": ""
   },
   "web/src/app/page.tsx": {
-    "mtime": 1793696932.5268323,
-    "seen": 1793703689.9279897,
-    "ast_hash": "5aa80654d263f016c84f3d07a4888b26",
+    "mtime": 1793705088.3326702,
+    "seen": 1793705186.8041308,
+    "ast_hash": "a18cda68d60c7690fe79ddc021b0af14",
     "semantic_hash": ""
   },
   "web/tsconfig.json": {
@@ -14652,9 +14652,9 @@
     "semantic_hash": ""
   },
   "web/src/app/landing-motion.tsx": {
-    "mtime": 1793696932.521947,
-    "seen": 1793703689.9279842,
-    "ast_hash": "f350308b686803e9ef2344f9133526b0",
+    "mtime": 1793705088.3287551,
+    "seen": 1793705186.8037865,
+    "ast_hash": "2a67f2f2cee65c271f4d0080f4e23f98",
     "semantic_hash": ""
   },
   "web/src/app/signal-lottie.tsx": {
@@ -14682,9 +14682,9 @@
     "semantic_hash": ""
   },
   "web/src/lib/i18n/messages.ts": {
-    "mtime": 1793696932.5444076,
-    "seen": 1793703689.9284194,
-    "ast_hash": "415f1bbc7fbfad4e898a8955131ca7ed",
+    "mtime": 1793705088.335666,
+    "seen": 1793705186.8069758,
+    "ast_hash": "308a44880863f0ac72e66cf9fa922f0c",
     "semantic_hash": ""
   },
   "web/src/lib/i18n/server.ts": {
@@ -14700,9 +14700,9 @@
     "semantic_hash": ""
   },
   "web/src/app/brand-lockup.tsx": {
-    "mtime": 1793696932.5141373,
-    "seen": 1793703689.9279718,
-    "ast_hash": "1cf0a8b7125361e017db95a9b896ee0e",
+    "mtime": 1793705088.3277726,
+    "seen": 1793705186.8029163,
+    "ast_hash": "b2bb6d6d246f685de99a9f07f6b38814",
     "semantic_hash": ""
   },
   "DA/logo.jpeg": {
@@ -14748,9 +14748,9 @@
     "semantic_hash": ""
   },
   "web/src/app/point-globe-canvas.tsx": {
-    "mtime": 1793696932.527807,
-    "seen": 1793703689.9279919,
-    "ast_hash": "b9cda83f2a06cc0f6e9f3e69ea3b2097",
+    "mtime": 1793705088.333665,
+    "seen": 1793705186.804134,
+    "ast_hash": "2ecaac9bbf1486ccecb7030222a33c9d",
     "semantic_hash": ""
   },
   "web/public/geo/natural-earth-countries.json": {
@@ -14766,21 +14766,21 @@
     "semantic_hash": ""
   },
   ".github/workflows/laverta-cicd.yml": {
-    "mtime": 1793703716.6141224,
-    "seen": 1793703817.5864913,
-    "ast_hash": "753f1284493b705a079d11e84c3b62ec",
+    "mtime": 1793705094.2340107,
+    "seen": 1793705186.4037783,
+    "ast_hash": "8c44445e5a9da7b7805513866fa5556e",
     "semantic_hash": ""
   },
   "deploy/compose.production.yaml": {
-    "mtime": 1793703015.1918483,
-    "seen": 1793703689.9269834,
-    "ast_hash": "718b4cc9ecd928fe834b6607b672b473",
+    "mtime": 1793705253.0814106,
+    "seen": 1793705523.4935875,
+    "ast_hash": "b33b0e64f6b1e6fd0efb75c1df121d10",
     "semantic_hash": ""
   },
   "deploy/server-deploy.sh": {
-    "mtime": 1793703532.948623,
-    "seen": 1793703689.9269874,
-    "ast_hash": "32c4db16539970d53c4be054ef0117d4",
+    "mtime": 1793705368.434451,
+    "seen": 1793705523.4935925,
+    "ast_hash": "ec34809c980ffc13dbd38e2a51cb68b2",
     "semantic_hash": ""
   },
   "deploy/ssh-gateway.sh": {
@@ -14841,6 +14841,12 @@
     "mtime": 1793703120.029407,
     "seen": 1793703689.950503,
     "ast_hash": "251b3d656390bc5647f836da6e922d5a",
+    "semantic_hash": ""
+  },
+  "web/src/app/method-intro.tsx": {
+    "mtime": 1793705088.331689,
+    "seen": 1793705186.8039556,
+    "ast_hash": "749c985c1396d91c0829539584c1023e",
     "semantic_hash": ""
   },
   "God's_Eye/package-lock.json": {

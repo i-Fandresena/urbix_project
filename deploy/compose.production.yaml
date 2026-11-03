@@ -14,7 +14,7 @@ services:
     mem_reservation: 256m
     cpus: 0.5
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U laverta -d laverta"]
+      test: ["CMD-SHELL", "pg_isready -U laverta -d laverta && psql -U laverta -d laverta -Atqc 'SELECT 1' >/dev/null"]
       interval: 10s
       timeout: 5s
       retries: 6
