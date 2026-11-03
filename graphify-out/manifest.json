@@ -14772,9 +14772,9 @@
     "semantic_hash": ""
   },
   "deploy/compose.production.yaml": {
-    "mtime": 1793707055.6875265,
-    "seen": 1793707153.9009366,
-    "ast_hash": "54cbf2c9ee2c0ab7ebdbee0707ef49e6",
+    "mtime": 1793709030.2040904,
+    "seen": 1793709121.0653286,
+    "ast_hash": "b7f556e54b94de20e87784efe03a7054",
     "semantic_hash": ""
   },
   "deploy/server-deploy.sh": {
@@ -14838,9 +14838,9 @@
     "semantic_hash": ""
   },
   "deploy/README.md": {
-    "mtime": 1793703120.029407,
-    "seen": 1793703689.950503,
-    "ast_hash": "251b3d656390bc5647f836da6e922d5a",
+    "mtime": 1793709059.05399,
+    "seen": 1793709121.0966458,
+    "ast_hash": "c4cf7ab4996222e7087e691e1cb46a19",
     "semantic_hash": ""
   },
   "web/src/app/method-intro.tsx": {
